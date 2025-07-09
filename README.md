@@ -35,7 +35,15 @@ Code and instructions to be added very soon!
 ## Citation
 
 ```
-to be added soon
+@misc{bassi2025learningsegmentationradiologyreports,
+      title={Learning Segmentation from Radiology Reports}, 
+      author={Pedro R. A. S. Bassi and Wenxuan Li and Jieneng Chen and Zheren Zhu and Tianyu Lin and Sergio Decherchi and Andrea Cavalli and Kang Wang and Yang Yang and Alan L. Yuille and Zongwei Zhou},
+      year={2025},
+      eprint={2507.05582},
+      archivePrefix={arXiv},
+      primaryClass={eess.IV},
+      url={https://arxiv.org/abs/2507.05582}, 
+}
 ```
 
 ## Acknowledgement
