@@ -1,0 +1,14 @@
+numpy<2
+vllm==0.6.1.post2
+outlines==0.0.46
+git+https://github.com/huggingface/transformers@21fac7abba2a37fae86106f87fcf9974fd1e3830
+pandas
+nibabel
+matplotlib
+opencv-python
+scipy
+openai
+scikit-learn
+scikit-image==0.24.0
+openpyxl
+simpleitk

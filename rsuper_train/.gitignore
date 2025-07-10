@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*_bkp.py
+flops.py
+checkpoint/
+log*/
+exp/
+initmodel/
+result/
+*.swp
+test*

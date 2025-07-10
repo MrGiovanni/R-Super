@@ -1,0 +1,91 @@
+#DATA
+#data_root: /fastwork/psalvador/JHU/data/atlas_300_medformer_npy/ccvl/net/ccvl15/pedro/atlas_300_medformer_npy/
+data_root: /projects/bodymaps/Pedro/data/atlas_300_medformer_npy/
+UFO_root: /projects/bodymaps/Pedro/data/UFO_medformer_npy/
+reports: /projects/bodymaps/Data/UCSFLLMOutputLarge27k.csv
+classes: 42
+modality: CT
+
+
+#MODEL
+arch: medformer
+in_chan: 1
+base_chan: 32
+conv_block: 'BasicBlock'
+
+down_scale: [[2,2,2], [2,2,2], [2,2,2], [2,2,2]]
+kernel_size: [[3,3,3], [3,3,3], [3,3,3], [3,3,3], [3,3,3]]
+chan_num: [64, 128, 256, 320, 256, 128, 64, 32]
+norm: in
+act: relu
+map_size: [3,3,3]
+conv_num: [2,0,0,0, 0,0,2,2]
+trans_num: [0,2,4,6, 4,2,0,0]
+num_heads: [1,4,8,10, 8,4,1,1]
+expansion: 4
+fusion_depth: 2
+fusion_dim: 320
+fusion_heads: 10
+attn_drop: 0
+proj_drop: 0
+proj_type: 'depthwise'
+
+
+#TRAIN
+epochs: 150
+training_size: [128, 128, 128] # training crop size
+start_epoch: 0
+num_workers: 8
+aug_device: 'cpu'
+
+aux_loss: True
+aux_weight: [0.5, 0.5]
+
+split_seed: 0
+k_fold: 10
+
+optimizer: adamw
+base_lr: 0.0006
+betas: [0.9, 0.999]
+#momentum: 0.9   # momentum of SGD optimizer
+weight_decay: 0.05  # weight decay of SGD optimizer
+weight: [0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+rlt: 1 # relation between CE and Dice loss
+
+
+scale: [0, 0, 0]  # scale for data augmentation  0 0.3 0.3
+rotate: [30, 30, 30] # rotation angle for data augmentation 30
+translate: [0, 0, 0]
+affine_pad_size: [40, 40, 40]
+gaussian_noise_std: 0.02
+
+print_freq: 5
+iter_per_epoch: 1000
+
+
+
+
+#VALIDATION
+ema: True
+ema_alpha: 0.99
+val_freq: 20000
+
+
+
+#INFERENCE
+sliding_window: True
+window_size: [128, 128, 128]
+
+
+
+# DDP
+world_size: 1
+proc_idx: 0
+rank: 0
+port: 10000
+dist_url: 'tcp://localhost:10000' # the port number here should be the same as the previous one
+dist_backend: "nccl"
+multiprocessing_distributed: true
+reproduce_seed: null
+
+
