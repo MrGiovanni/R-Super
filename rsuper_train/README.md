@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../documents/logo.png" alt="logo" width="200" />
+</div>
+
 # Training and Testing R-Super
 This code uses our novel Volume Loss and Ball Loss to train a tumor segmentation AI, using both radiology reports and segmentation masks. The code below uses the [MedFormer](https://github.com/yhygao/CBIM-Medical-Image-Segmentation) architecture. 
 
