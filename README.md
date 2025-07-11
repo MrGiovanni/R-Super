@@ -4,7 +4,7 @@
 
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=MrGiovanni/R-Super&left_color=%2363C7E6&right_color=%23CEE75F)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MrGiovanni/R-Super?style=social)](https://github.com/MrGiovanni/R-Super/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/MrGiovanni/R-Super.svg?style=social)](https://github.com/MrGiovanni/R-Super/stargazers)
 <a href="https://twitter.com/bodymaps317">
         <img src="https://img.shields.io/twitter/follow/BodyMaps?style=social" alt="Follow on Twitter" />
 </a><br/>
