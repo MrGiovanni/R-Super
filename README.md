@@ -77,14 +77,11 @@ We use our novel Volume Loss and Ball Loss to train a tumor segmentation AI usin
 If you use the code, data or methods in this repository, please cite:
 
 ```
-@misc{bassi2025learning,
-      title={Learning Segmentation from Radiology Reports}, 
-      author={Pedro R. A. S. Bassi and Wenxuan Li and Jieneng Chen and Zheren Zhu and Tianyu Lin and Sergio Decherchi and Andrea Cavalli and Kang Wang and Yang Yang and Alan L. Yuille and Zongwei Zhou},
-      year={2025},
-      eprint={2507.05582},
-      archivePrefix={arXiv},
-      primaryClass={eess.IV},
-      url={https://arxiv.org/abs/2507.05582}, 
+@article{bassi2025learning,
+  title={Learning Segmentation from Radiology Reports},
+  author={Bassi, Pedro RAS and Li, Wenxuan and Chen, Jieneng and Zhu, Zheren and Lin, Tianyu and Decherchi, Sergio and Cavalli, Andrea and Wang, Kang and Yang, Yang and Yuille, Alan L and others},
+  journal={arXiv preprint arXiv:2507.05582},
+  year={2025}
 }
 ```
 
