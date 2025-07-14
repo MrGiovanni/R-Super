@@ -83,6 +83,13 @@ If you use the code, data or methods in this repository, please cite:
   journal={arXiv preprint arXiv:2507.05582},
   year={2025}
 }
+
+@article{bassi2025radgpt,
+  title={Radgpt: Constructing 3d image-text tumor datasets},
+  author={Bassi, Pedro RAS and Yavuz, Mehmet Can and Wang, Kang and Chen, Xiaoxi and Li, Wenxuan and Decherchi, Sergio and Cavalli, Andrea and Yang, Yang and Yuille, Alan and Zhou, Zongwei},
+  journal={arXiv preprint arXiv:2501.04678},
+  year={2025}
+}
 ```
 
 ## Acknowledgement
