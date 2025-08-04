@@ -167,7 +167,7 @@ def split_segmentation(input_nifti_path, output_folder, classes_dict):
         base_name = os.path.splitext(base_name)[0]
 
     # Optionally create a subfolder for each input file
-    this_out_folder = os.path.join(output_folder, base_name, 'predictions')
+    this_out_folder = os.path.join(output_folder, base_name, 'segmentations')
     os.makedirs(this_out_folder, exist_ok=True)
 
     for class_name, label_list in classes_dict.items():
@@ -212,7 +212,7 @@ def main():
                 base_name = os.path.splitext(base_name)[0]
             
             # The same logic used in split_segmentation to build the output folder
-            this_out_folder = os.path.join(args.output_dir, base_name, 'predictions')
+            this_out_folder = os.path.join(args.output_dir, base_name, 'segmentations')
             
             # Check if every class_name has a corresponding <class_name>.nii.gz
             all_exist = True
