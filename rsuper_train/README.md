@@ -49,7 +49,7 @@ pip install -r requirements.txt
 
 ```
 /path/to/dataset/
-├── BDMAP_A0000001
+├── BDMAP_0000001
 |    ├── ct.nii.gz
 │    └── segmentations
 │          ├── liver_tumor.nii.gz
@@ -62,7 +62,7 @@ pip install -r requirements.txt
 │          ├── liver.nii.gz
 │          ├── pancreas.nii.gz
 │          └──...
-├── BDMAP_A0000002
+├── BDMAP_0000002
 |    ├── ct.nii.gz
 │    └── segmentations
 │          ├── liver_tumor.nii.gz
