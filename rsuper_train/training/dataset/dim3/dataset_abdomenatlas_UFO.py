@@ -37,7 +37,7 @@ def clean_ufo(reports,annotated_tumors):
     
     for organ in annotated_tumors:
         interest[organ] = reports[reports['Standardized Organ'] == organ]
-        interest[organ] = interest[organ][interest[organ]['Tumor Size (mm)'] != 'u']
+        interest[organ] = interest[organ][~interest[organ]['Tumor Size (mm)'].isin(['u','U'])]
         interest[organ] = interest[organ][interest[organ]['Tumor Size (mm)'] != 'multiple']
         interest[organ] = interest[organ][interest[organ]['Unknow Tumor Size'] == 'no']
         if organ in ['kidney','adrenal_gland','lung','breast','femur']:
