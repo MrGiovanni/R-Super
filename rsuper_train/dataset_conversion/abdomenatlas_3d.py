@@ -87,7 +87,7 @@ def process_case_bdmap_format(name,overwrite=False):
             if not os.path.exists(pth):
                 pth = os.path.join(label_path, name, 'predictions', f"{lab_name}.nii.gz")
             if not os.path.exists(pth):
-                print(f"File {pth} does not exist, writing 0 to mask")
+                print(f"File {pth} does not exist")
                 # Create a zero label
                 l = sitk.Image(itk_img.GetSize(), sitk.sitkUInt8)
                 l.SetSpacing(itk_img.GetSpacing())  # Match spacing
@@ -195,7 +195,9 @@ if __name__ == '__main__':
                         help="Flag to indicate whether to overwrite existing files.")
     parser.add_argument("--add_lesions", type=str, default=None,
                         help="Path to a yaml file with the lesions to add to the classes list here.")
-
+    parser.add_argument("--label_yaml", type=str, default=None,
+                        help="Path to a yaml file with the label names.")
+    
 
     args = parser.parse_args()
 
@@ -218,8 +220,26 @@ if __name__ == '__main__':
     #print([file for file in os.listdir(src_path) if file.endswith('.nii.gz') and not file.startswith('BDMAP_0000')])
     #remove the cases already predicted and saved in the tgt_path
     workers = args.workers
-    with open('label_names.yaml', 'r') as f:
-        lab_name_list = yaml.safe_load(f)
+    if args.label_yaml is not None:
+        with open(args.label_yaml, 'r') as f:
+            lab_name_list = yaml.safe_load(f)
+    else:
+        #get labels from source
+        case_id = name_list[0]
+        seg_dir  = os.path.join(label_path, case_id, "segmentations")
+
+        lab_name_list = [
+            fn.replace('.nii.gz','')               # strip ".nii.gz"
+            for fn in os.listdir(seg_dir)
+            if fn.endswith(".nii.gz") and 'background' not in fn
+        ]
+
+        if not lab_name_list:
+            raise ValueError(f"No .nii.gz label found in {seg_dir}")
+
+        lab_name_list.sort()
+        #raise ValueError(f'Labels are: {lab_name_list}')
+
 
     if args.add_lesions is not None:
         with open(args.add_lesions, 'r') as f:
