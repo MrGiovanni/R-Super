@@ -82,62 +82,10 @@ pip install -r requirements.txt
 
 
 
+Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. You must not have lesion masks in the dataset annotated with reports---if you use empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!
 
-**2-Define Labels.** Change [dataset_conversion/label_names.yaml](dataset_conversion/label_names.yaml), write the names of the labels you want your model to predict. The names should match the names in your dataset (see dataset format above), without the .nii.gz part. Order them alphabetically.
-<details>
-<summary style="margin-left: 25px;">Example of label name list</summary>
-<div style="margin-left: 25px;">
 
-```yaml
-- adrenal_gland_left
-- adrenal_gland_right
-- aorta
-- bladder
-- celiac_trunk
-- colon
-- common_bile_duct
-- duodenum
-- esophagus
-- femur_left
-- femur_right
-- gall_bladder
-- hepatic_vessel
-- intestine
-- kidney_left
-- kidney_lesion
-- kidney_right
-- liver
-- liver_lesion
-- liver_segment_1
-- liver_segment_2
-- liver_segment_3
-- liver_segment_4
-- liver_segment_5
-- liver_segment_6
-- liver_segment_7
-- liver_segment_8
-- lung_left
-- lung_right
-- pancreas
-- pancreas_body
-- pancreas_head
-- pancreas_tail
-- pancreatic_lesion
-- portal_vein_and_splenic_vein
-- postcava
-- prostate
-- rectum
-- spleen
-- stomach
-- superior_mesenteric_artery
-- veins
-```
-
-Include the tumors you want to predict in the format: {organ}_lesion. E.g., kidney_lesion. For pancreas, name it pancreatic_lesion.
-</div>
-</details>
-
-**3-Convert to npz.** Convert from nii.gz to npz. This is the standard format for MedFormer and nnU-Net preprocessed.
+**2-Convert to npz.** Convert from nii.gz to npz. This is the standard format for MedFormer and nnU-Net preprocessed.
 ```bash
 cd dataset_conversion
 python abdomenatlas_3d.py --src_path /path/to/dataset/ --label_path /path/to/dataset/ --tgt_path /path/to/dataset_b/ --workers 16
