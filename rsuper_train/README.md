@@ -52,9 +52,9 @@ pip install -r requirements.txt
 ├── BDMAP_0000001
 |    ├── ct.nii.gz
 │    └── segmentations
-│          ├── liver_tumor.nii.gz
-│          ├── kidney_tumor.nii.gz
-│          ├── pancreas_tumor.nii.gz
+│          ├── liver_lesion.nii.gz
+│          ├── kidney_lesion.nii.gz
+│          ├── pancreatic_lesion.nii.gz
 │          ├── aorta.nii.gz
 │          ├── gall_bladder.nii.gz
 │          ├── kidney_left.nii.gz
@@ -65,9 +65,9 @@ pip install -r requirements.txt
 ├── BDMAP_0000002
 |    ├── ct.nii.gz
 │    └── segmentations
-│          ├── liver_tumor.nii.gz
-│          ├── kidney_tumor.nii.gz
-│          ├── pancreas_tumor.nii.gz
+│          ├── liver_lesion.nii.gz
+│          ├── kidney_lesion.nii.gz
+│          ├── pancreatic_lesion.nii.gz
 │          ├── aorta.nii.gz
 │          ├── gall_bladder.nii.gz
 │          ├── kidney_left.nii.gz
