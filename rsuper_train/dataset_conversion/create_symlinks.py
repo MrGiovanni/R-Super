@@ -43,6 +43,8 @@ def main(src: str, dst: str, csv_path: str) -> None:
 
     # read IDs (strip spaces, ignore blank rows)
     df = pd.read_csv(csv_path, dtype=str)
+    if 'BDMAP ID' in df.columns:
+        df = df.rename(columns={'BDMAP ID': 'BDMAP_ID'})
     col = [c for c in df.columns if c.strip().lower() == "bdmap_id"]
     if not col:
         raise KeyError("CSV must contain a column named BDMAP_ID")
