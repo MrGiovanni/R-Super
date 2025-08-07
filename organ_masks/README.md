@@ -51,6 +51,8 @@ Our code also accepts data in the AbdomenAtlas format, shown below.
 </div>
 </details>
 
+For a custom dataset, you may use symlinks to change its format but save disk space.
+
 2- Install nnU-Net (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/installation_instructions.md)
 ```bash
 conda create -n organ_masks python=3.12 -y
@@ -60,7 +62,6 @@ pip install torch torchvision torchaudio
 pip install nnunetv2
 ```
 
-For a custom dataset, you may use symlinks to change its format but save disk space.
 
 3- Convert the dataset (clip HU values and reorient)
 
