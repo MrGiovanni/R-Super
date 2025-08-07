@@ -111,6 +111,9 @@ def main():
         ids = sorted(ids['BDMAP ID'].to_list())
     else:
         ids = sorted(os.listdir(args.pth))
+        
+    print(f'Number of loaded ids: {len(ids)}')
+    
 
     # Collect input and output files
     if args.BDMAP_format:
@@ -124,13 +127,19 @@ def main():
         files_output = [os.path.join(args.outdir, folder) 
                         for folder in ids 
                         if ('BDMAP' in folder)]
+        files_input, files_output = filter_existing_outputs(files_input, files_output)
         files_input, files_output = split_files(files_input, files_output, args.num_parts, args.part_id)
     else:
-        files_input = [[os.path.join(args.pth, file)] for file in ids if (file.endswith('.nii.gz') and file[0]!='.')]
-        files_output = [os.path.join(args.outdir, file.replace('.nii.gz','')) for file in ids if (file.endswith('.nii.gz') and file[0]!='.')]
+        if args.ids is None:
+            files_input = [[os.path.join(args.pth, file)] for file in ids if (file.endswith('.nii.gz') and file[0]!='.')]
+            files_output = [os.path.join(args.outdir, file.replace('.nii.gz','')) for file in ids if (file.endswith('.nii.gz') and file[0]!='.')]
+        else:
+            files_input = [[os.path.join(args.pth, file+'.nii.gz')] for file in ids]
+            files_output = [os.path.join(args.outdir, file) for file in ids]
+        files_input, files_output = filter_existing_outputs(files_input, files_output)
+        
         files_input, files_output = split_files(files_input, files_output, args.num_parts, args.part_id)
         
-    files_input, files_output = filter_existing_outputs(files_input, files_output)
 
     print('Input:', files_input[:10])
     print('Output:', files_output[:10])
