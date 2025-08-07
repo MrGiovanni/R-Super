@@ -101,7 +101,7 @@ cd ..
 R-Super trains in two steps. First, with only the CT scans with tumor segmentation masks. We assume this data is in '/path/to/dataset_masks_npz/', it should include tumor patients and healthy patients.
 
 **1- Data Augmentation**
-The code bellow will start a python process that will keep running forever (you can stop it with 'pkill -f rsuper'). This process will keep performing data augmentation and saving the augmented data to disk. *Always deep it running while you train. Restart it in case it stops.*
+The code bellow will start a python process that will keep running forever (you can stop it with 'pkill -f rsuper'). This process will keep performing data augmentation and saving the augmented data to disk. *Always deep it running while you train. Restart it in case it stops.* This code uses only CPU, no GPU.
 
 ```bash
 python AugmentEternal.py --dataset atlas_ufo --model medformer --dimension 3d --batch_size 2 --crop_on_tumor --workers_overwrite 4 --save_destination /path/to/augmented_dataset_masks_and_reports/ --dataset_path /path/to/dataset_masks_npz/ --UFO_root /path/to/dataset_reports_npz/  --reports /path/to/output_LLM_post.csv &
