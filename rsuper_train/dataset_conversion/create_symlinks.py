@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Create a symlinked subset of a dataset.
+Create a symlinked subset of a dataset already in BDMAP format.
 
 Example
 -------
-python create_symlinks.py \
+python make_subset_links.py \
        --src /projects/bodymaps/Data/CT_RATE/ct_rate_nnunet_labels \
        --dst /projects/bodymaps/Data/CT_RATE/ct_rate_nnunet_labels_subset \
        --csv /projects/bodymaps/Data/CT_RATE/pancreas_and_some_normals.csv
@@ -12,6 +12,7 @@ python create_symlinks.py \
 import argparse
 import os
 from pathlib import Path
+from tqdm import tqdm
 
 import pandas as pd
 
@@ -51,7 +52,7 @@ def main(src: str, dst: str, csv_path: str) -> None:
     ids = df[col[0]].dropna().str.strip().unique()
 
     missing = []
-    for bid in ids:
+    for bid in tqdm(ids):
         dir_case  = src_root / bid                  # /src/BDMAP_xxxxxxx/
         file_case = src_root / f"{bid}.nii.gz"      # /src/BDMAP_xxxxxxx.nii.gz
         dst_case  = dst_root / bid
