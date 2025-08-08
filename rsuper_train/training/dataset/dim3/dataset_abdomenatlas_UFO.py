@@ -681,7 +681,7 @@ class AbdomenAtlasDataset(Dataset):
             #print('XXXXXXXX Tumor Found for:', self.img_list[idx], flush=True, file=sys.stderr)
             return retur,tumors
 
-    def get_random_tumor_seg_mask(self, tensor_lab, tumor_segment, exclude=None):
+    def get_random_tumor_seg_mask(self, tensor_lab, tumor_segment, exclude=None,classes=None):
         #print('Selected tumor segment:', tumor_segment, flush=True, file=sys.stderr)
         #get the mask for a given segment/organ or segment list
         
@@ -708,12 +708,10 @@ class AbdomenAtlasDataset(Dataset):
         if len(tensor_lab.shape) == 4:
             tensor_lab = tensor_lab.unsqueeze(0)
         assert len(tensor_lab.shape) == 5, f'Label tensor must have 5 dimensions, but got {len(tensor_lab.shape)} dimensions and shape {tensor_lab.shape}'
-        if tensor_lab.shape[1] == len(self.classes_UFO):
-            classes = self.classes_UFO
-        elif tensor_lab.shape[1] == len(self.classes):
-            classes = self.classes
-        else:
-            raise ValueError('Label tensor must have %s channels, but got %s channels'%(len(self.classes_UFO), tensor_lab.shape[1]))
+        
+        if classes is None:
+            raise ValueError('Classes is mandatory')
+
         
         tumor_segment_labels = []
         for i,clss in enumerate(classes,0):
@@ -740,7 +738,7 @@ class AbdomenAtlasDataset(Dataset):
             return torch.zeros_like(tensor_lab).type_as(tensor_lab)
         
         print('Chosen segment:', tumor_segment, flush=True, file=sys.stderr)
-        segment_mask = self.get_random_tumor_seg_mask(tensor_lab, tumor_segment).squeeze(0)
+        segment_mask = self.get_random_tumor_seg_mask(tensor_lab, tumor_segment,classes=self.classes).squeeze(0)
         assert segment_mask.sum().item()!=0.0, f'problem in case {self.current_sample}, segment_mask is empty, crop is in {tumor_segment}'
         #apply it to the lesion classes
         segment_mask_lesion_ch = []
@@ -807,7 +805,7 @@ class AbdomenAtlasDataset(Dataset):
                 tumor_segment = random.choice(segment_options)
                 #print('Chosen segment a:', tumor_segment, flush=True, file=sys.stderr)
                 #get the mask for the tumor segment
-                tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment)
+                tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment,classes=self.classes_UFO)
                 
                 if tumor_segment_mask.sum().item()==0.0:
                     self.zero_masks[self.current_sample]=tumor_segment
@@ -822,7 +820,7 @@ class AbdomenAtlasDataset(Dataset):
                         return tensor_img, tensor_lab, tumor_dict, 'random'
                     else:
                         tumor_segment = random.choice(segment_options)
-                        tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment)
+                        tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment,classes=self.classes_UFO)
                         if tumor_segment_mask.sum().item()==0.0:
                             #random crop
                             tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
@@ -851,7 +849,7 @@ class AbdomenAtlasDataset(Dataset):
                         return tensor_img, tensor_lab, tumor_dict, 'random'
                     tumor_segment = random.choice(segment_options)
                     #get the mask for the tumor segment
-                    tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment)
+                    tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment,classes=self.classes_UFO)
                     out = augmentation.crop_foreground_3d(tensor_ct=tensor_img, tensor_lab=tensor_lab, foreground=tumor_segment_mask, crop_size=[d, h, w])
                     if isinstance(out, tuple):
                         tensor_img, tensor_lab, cropped_forg = out
