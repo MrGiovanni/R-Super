@@ -130,6 +130,8 @@ def build_mapping():
         # Find all label IDs whose name contains `key`
         for name, val in labels.items():
             if key in name:
+                if key=='bladder' and 'gall' in name:
+                    continue
                 ids.append(val)
 
         # Special case: "pancreas" also includes "pancreatic"
