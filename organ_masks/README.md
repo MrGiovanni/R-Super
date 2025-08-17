@@ -6,16 +6,12 @@ This code creates the organ and organ sub-segment (e.g. pancreatic head, body an
 
 ## Download the nnU-Net
 
-1. Download our organ segmenter from huggingface.co/prasb/OrganSubSegmenter/: [click here](https://huggingface.co/prasb/OrganSubSegmenter/resolve/main/nnUNetTrainer__nnUNetPlannerResEncL_torchres_isotropic__3d_fullres.zip?download=true) or use the command below
+1. Download our organ segmenter from huggingface.co/prasb/OrganSubSegmenter/ and move it to R-Super/organ_masks. Use the wget (below) or [click here](https://huggingface.co/prasb/OrganSubSegmenter/resolve/main/nnUNetTrainer__nnUNetPlannerResEncL_torchres_isotropic__3d_fullres.zip?download=true)
 ```bash
-cd R-Super/organ_masks
-conda create -n hf python=3.12 -y
-conda activate hf
-conda install pip
-pip install huggingface-hub
-huggingface-cli download prasb/OrganSubSegmenter --local-dir .
+cd organ_masks
+wget https://huggingface.co/prasb/OrganSubSegmenter/resolve/main/nnUNetTrainer__nnUNetPlannerResEncL_torchres_isotropic__3d_fullres.zip
 ```
-2. Unzip the nnU-Net: 
+2. Unzip the downloaded file (nnU-Net): 
 ```bash
 unzip nnUNetTrainer__nnUNetPlannerResEncL_torchres_isotropic__3d_fullres.zip
 ```
