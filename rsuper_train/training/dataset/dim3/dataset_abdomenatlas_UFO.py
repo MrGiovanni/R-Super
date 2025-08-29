@@ -54,7 +54,8 @@ def clean_ufo(reports,annotated_tumors):
     interest = interest.drop_duplicates()
     print('Total number of useful cases:', interest['BDMAP_ID'].nunique())
     ids_of_interest = interest['BDMAP_ID'].unique().tolist()
-    return interest, ids_of_interest,tumors_per_type
+    reports = reports[reports['BDMAP_ID'].isin(ids_of_interest)]
+    return reports, ids_of_interest,tumors_per_type
 
 class AbdomenAtlasDataset(Dataset):
     def __init__(self, args, mode='train', seed=0, all_train=False,
