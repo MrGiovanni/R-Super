@@ -12,14 +12,21 @@
 
 </div>
 
-<div align="center">
- 
-![logo](documents/rsuper_abstract.png)
-</div>
+
+<p align="center">
+  <img src="documents/r_super_pdac-8.gif" width="450"/>
+</p> 
+
+
 
 *Abdominal CT datasets have dozens to a couple thousand tumor masks. In contrast, hospitals and new public datasets have tens/hundreds of thousands of tumor CTs with radiology reports. Thus, we ask:* **how can radiology reports improve tumor segmentation?**
 
 We present R-Super, a training strategy that transforms radiology reports (text) into direct (per-voxel) supervision for tumor segmentation AI. Before training, we use LLM to extract tumor information from radiology reports. Then, R-Super introduces new loss functions, which use this extracted information to teach the AI to segment tumors that are coherent with reports, in terms of tumor count, diameters, and locations. By merging large-scale CT-Report datasets (e.g., [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/), [CT-Rate](https://huggingface.co/datasets/ibrahimhamamci/CT-RATE), [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)), with small or large CT-Mask datasets (e.g., [MSD](http://medicaldecathlon.com), [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/)), the peformance of tumor segmentation AI can **improve by up to 8-16%** in F1, AUC, DSC and NSD. 
+
+<div align="center">
+ 
+![logo](documents/rsuper_abstract.png)
+</div>
 
 
 ## Paper
