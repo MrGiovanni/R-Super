@@ -23,6 +23,28 @@ from pathlib import Path
 #python dataset_abdomenatlas.py --dataset abdomenatlas --model medformer --dimension 3d --batch_size 2 --crop_on_tumor --save_destination /fastwork/psalvador/JHU/data/atlas_300_medformer_augmented_npy_augmented_multich_crop_on_tumor/ --crop_on_tumor --multi_ch_tumor --workers_overwrite 10
 
 
+def normalize_no_lesion(col: pd.Series) -> pd.Series:
+    """Return a boolean Series where True = healthy (no lesion), False = not healthy."""
+    if pd.api.types.is_bool_dtype(col):
+        return col
+
+    # Numeric path first (handles ints/floats AND numeric-looking strings)
+    num = pd.to_numeric(col, errors='coerce')
+    has_num = num.notna()
+    out = pd.Series(False, index=col.index)  # default False (not healthy)
+    out[has_num] = num[has_num].eq(1)
+
+    # Textual path for the rest
+    txt = col[~has_num].astype(str).str.strip().str.lower()
+    true_tokens  = {'1', '1.0', 'true', 't', 'yes', 'y'}
+    false_tokens = {'0', '0.0', 'false', 'f', 'no', 'n', '', 'nan', 'none', 'null'}
+
+    out.loc[~has_num & txt.isin(true_tokens)]  = True
+    out.loc[~has_num & txt.isin(false_tokens)] = False
+    # anything else remains False
+
+    return out
+
 def clean_ufo(reports,annotated_tumors):
     """
     This function gets a list of reports and removes cases of no interest:
@@ -32,7 +54,39 @@ def clean_ufo(reports,annotated_tumors):
     Then, we print the number of useful cases per tumor
     """
     
-    
+    #drop LLM hallucinations
+    hallucination=reports[(reports['Tumor Size (mm)'].astype(str).str.contains(r'^0\.0\s*x', regex=True, na=False)) | (reports['Tumor Size (mm)']=='0.0') | (reports['Tumor Size (mm)']=='0')]
+    reports = reports[~reports['BDMAP_ID'].isin(hallucination['BDMAP_ID'].tolist())]
+
+    #ignore TUMORS (not patients here) in organs not in annotated_tumors
+    reports = reports[reports['Standardized Organ'].isin(annotated_tumors) | normalize_no_lesion(reports['no lesion'])]
+
+    #now drop from reports any CT scan (BDMAP_ID) where any row has no number in 'Tumor Size (mm)' or 'Unknow Tumor Size' is not 'no'
+    # consider only tumor rows (exclude healthy)
+    is_healthy = normalize_no_lesion(reports['no lesion'])
+    tumor_rows = ~is_healthy
+
+    # rows where size has no numeric digit OR 'Unknow Tumor Size' is not 'no'
+    size_str = reports['Tumor Size (mm)'].astype(str)
+    has_digit = size_str.str.contains(r'\d', regex=True, na=False)
+    unknown_not_no = reports['Unknow Tumor Size'].astype(str).str.strip().str.lower().ne('no')
+
+    bad_size_rows = tumor_rows & (~has_digit | unknown_not_no)
+    bad_size_ids = reports.loc[bad_size_rows, 'BDMAP_ID'].unique()
+
+    # laterality requirement for specific organs
+    organs_need_lr = {'kidney', 'adrenal_gland', 'lung', 'breast', 'femur'}
+    need_lr_rows = tumor_rows & reports['Standardized Organ'].isin(organs_need_lr)
+
+    loc_str = reports['Standardized Location'].astype(str).str.lower()
+    has_lr = loc_str.str.contains('left', na=False) | loc_str.str.contains('right', na=False)
+    bad_lr_rows = need_lr_rows & ~has_lr
+    bad_lr_ids = reports.loc[bad_lr_rows, 'BDMAP_ID'].unique()
+
+    # drop all offending BDMAP_IDs
+    drop_ids = set(bad_size_ids).union(bad_lr_ids)
+    reports = reports[~reports['BDMAP_ID'].isin(drop_ids)]
+
     interest = {}
     
     for organ in annotated_tumors:
@@ -54,7 +108,9 @@ def clean_ufo(reports,annotated_tumors):
     interest = interest.drop_duplicates()
     print('Total number of useful cases:', interest['BDMAP_ID'].nunique())
     ids_of_interest = interest['BDMAP_ID'].unique().tolist()
-    return interest, ids_of_interest,tumors_per_type
+    
+    reports = reports[reports['BDMAP_ID'].isin(ids_of_interest)]
+    return reports, ids_of_interest,tumors_per_type
 
 class AbdomenAtlasDataset(Dataset):
     def __init__(self, args, mode='train', seed=0, all_train=False,
@@ -63,7 +119,7 @@ class AbdomenAtlasDataset(Dataset):
                  load_augmented=False,
                  gigantic_length=True,
                  save_augmented=False,
-                 tumor_classes=['liver','kidney','pancreas'],
+                 tumor_classes=['kidney','pancreas'],
                  balance_supervision=True,
                  UFO_only=False,
                  Atlas_only=False):    
