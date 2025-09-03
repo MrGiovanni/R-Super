@@ -58,7 +58,7 @@ The core of R-Super is its new report supervision loss functions: the Ball Loss 
 The core of R-Super is its new report supervision loss functions: the Ball Loss and the Volume Loss. They are at: [rsuper_train/training/losses_foundation.py](rsuper_train/training/losses_foundation.py). The Volume Loss is the function volume_loss_basic, and the Ball Loss is the function ball_loss. If you want to develop your own report supervision loss, you can begin by modifying these functions!
 </details>
 
-### Datasets
+### Public Datasets
 
 R-Super trains with both CT-Mask pairs (potentially few) and CT-Report pairs. In our paper, our experiments used CT-Mask pairs from [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/) (to be released soon), and CT-Report from a private dataset at UCSF. As public dataset alternatives, you may use CT-Mask pairs from [MSD](http://medicaldecathlon.com) Pancreas (N=191) and CT-Report pairs from [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40) (about 2K pancreatic tumor cases). You can download these datasets by clicking on their names.
 
