@@ -181,7 +181,7 @@ python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d 
 - lr: Initial learning rate, we decay it.
 - dist_url: used for DDP. You need to change the final 4 numbers if you get a port error.
 - report_volume_loss_basic: weight for our report-based losses (volume and ball losses). If 0, they are deactivated (training with masks only).
-
+- ucsf_ids: this is an optional argument. By default, the code will use all reports in --reports (and corresponding CT scans in --ufo_root) for training. If you pass ucsf_ids, the code will only train with the CT scans and reports indicated in ucsf_ids. You can use this to separate a training set: --ucsf_ids /path/to/training/set/ids.csv. The csv file must have a 'BDMAP ID' column with the ids of the training cases.
 
 </details>
 
