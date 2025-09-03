@@ -82,7 +82,7 @@ pip install -r requirements.txt
 
 
 
-Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. You must not have lesion masks in the dataset annotated with reports---if you use empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!
+Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. Do not keep lesion masks in the dataset annotated with reports---if you keep empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!
 
 
 **2-Convert to npz.** Convert from nii.gz to npz. This is the standard format for MedFormer and nnU-Net preprocessed.
