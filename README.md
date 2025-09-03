@@ -78,7 +78,7 @@ We use an [nnU-Net](https://github.com/MIC-DKFZ/nnUNet), trained for organ segme
 
 We use our novel Volume Loss and Ball Loss to train a tumor segmentation AI using segmentation masks (few or many) and radiology reports.
 
-[rsuper_train/README.md](organ_masks/README.md)
+[rsuper_train/README.md](rsuper_train/README.md)
 
 ## Citation
 
