@@ -207,6 +207,14 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 ```bash
 python predict_abdomenatlas.py --load exp/abdomenatlas_ufo/mask_and_report_model_name/fold_0_latest.pth --img_path /path/to/test/dataset/ --class_list dataset_conversion/label_names.yaml --save_path /path/to/inference/output/ --organ_mask_on_lesion --save_probabilities_lesions
 ```
+<details>
+<summary style="margin-left: 25px;"> Optional arguments </summary>
+<div style="margin-left: 25px;">
+
+- ids: this is an optional argument. By default, the code will predict on all cases in --img_path. If you pass ids, the code will only test with the CT scans indicated in ids. You can use this to separate a test set: --ids /path/to/test/set/ids.csv. The csv file must have a 'BDMAP ID' column with the ids of the test cases.
+
+</details>
+
 
 **3- Use test reports to calculate sensitivity, specificity, AUC and F1-Score.**
 The code below checks the saved predictions, and calculates tumor volume for difference confidence thresholds. It saves these volumes, per sample, to a multiple csv files (one for each confidence threshold). Files are saved at /path/to/inference/output/
