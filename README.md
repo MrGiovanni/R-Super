@@ -104,12 +104,12 @@ We use our novel Volume Loss and Ball Loss to train a tumor segmentation AI usin
 
 #### Volume Loss
 <div align="center">
-  <img src="documents/volume_loss.png" alt="logo" width="600" />
+  <img src="documents/volume_loss.png" alt="logo" width="800" />
 </div>
 
 #### Ball Loss
 <div align="center">
-  <img src="documents/ball_loss.png" alt="logo" width="600" />
+  <img src="documents/ball_loss.png" alt="logo" width="800" />
 </div>
 
 
