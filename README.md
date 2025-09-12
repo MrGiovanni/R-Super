@@ -38,6 +38,24 @@ MICCAI 2025 <br/>
 <b>Finalist, Best Paper and Young Scientist Awards</b>  <br/>
 <a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
 
+## Demo on Public Data
+
+> [!NOTE]
+> **To be released very soon! Stay tuned!**
+
+## Public Trained Checkpoints
+
+For inference instructions, check the evaluation section [here](rsuper_train/README.md).
+
+| Model | Training Data | Tasks | Evaluation | Access |
+|-------|---------------|-------|------------|--------|
+| **R-Super (Paper)** | *16K CTs*, AbdomenAtlas 2.0 (beta) & UCSF (private) | Pancreas & kidney tumor segmentation | Table 2, [MICCAI paper](https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf) (R-Super) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/R-SuperPancreasKidney) |
+| **Baseline (no report supervision)** | *9K CTs*, AbdomenAtlas 2.0 (beta) | Pancreas & kidney tumor segmentation | Table 2, [MICCAI paper](https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf) (Segmentation) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/RSuperMaskPretrained) |
+
+
+> The checkpoint 'R-Super (Paper)' is the public segmentation checkpoint trained with **the largest number of lesion CT scans (5K)** that we know of: *2.2K pancreatic lesion CT-Report pairs, 344 pancreatic lesion CT-Mask pairs, 2.7K kidney lesion CT-Report pairs, 1.7K kidney lesion CT-Mask pairs, 9K controls w/o kidney or pancreas tumors.*
+
+
 ## Instructions
 
 To use R-Super to train a segmentation AI with radiology reports, we use an LLM to extract tumor information from reports **(1)**; we create organ segmentation masks **(2)**; and we use the new R-Super loss functions (volume and ball losses) to train the segmentation AI with both segmentation masks and radiology reports **(3)**.
@@ -60,7 +78,7 @@ The core of R-Super is its new report supervision loss functions: the Ball Loss 
 
 ### Public Datasets
 
-R-Super trains with both CT-Mask pairs (potentially few) and CT-Report pairs. In our paper, our experiments used CT-Mask pairs from [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/) (to be released soon), and CT-Report from a private dataset at UCSF. As public dataset alternatives, you may use CT-Mask pairs from [MSD](http://medicaldecathlon.com) Pancreas (N=191) and CT-Report pairs from [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40) (about 2K pancreatic tumor cases). You can download these datasets by clicking on their names.
+R-Super trains with both CT-Mask pairs (potentially few) and CT-Report pairs. In our paper, our experiments used CT-Mask pairs from [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/) (to be released soon), and CT-Report from a private dataset at UCSF. As public dataset alternatives, you may use CT-Mask pairs from [MSD](http://medicaldecathlon.com) Pancreas (N=191) and CT-Report pairs from [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40) (about 2K pancreatic tumor cases). You can download these datasets by clicking on their names. We will release a Demo of R-Super on public data very soon!
 
 ### 1- Extract tumor information from radiology reports using LLM
 
@@ -79,6 +97,21 @@ We use an [nnU-Net](https://github.com/MIC-DKFZ/nnUNet), trained for organ segme
 We use our novel Volume Loss and Ball Loss to train a tumor segmentation AI using segmentation masks (few or many) and radiology reports.
 
 [rsuper_train/README.md](rsuper_train/README.md)
+
+
+
+## Novel loss functions: reports supervise segmentation
+
+#### Volume Loss
+<div align="center">
+  <img src="documents/volume_loss.png" alt="logo" width="600" />
+</div>
+
+#### Ball Loss
+<div align="center">
+  <img src="documents/ball_loss.png" alt="logo" width="600" />
+</div>
+
 
 ## Citation
 
