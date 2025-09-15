@@ -36,7 +36,7 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 *Johns Hopkins University* <br/>
 MICCAI 2025 <br/>
 <b>Finalist, Best Paper and Young Scientist Awards</b>  <br/>
-<a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
+<a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a> <a href='https://www.cs.jhu.edu/~zongwei/poster/bassi2025miccai_rsuper.pdf'><img src='https://img.shields.io/badge/Poster-PDF-blue'></a>
 
 ## Demo on Public Data
 
