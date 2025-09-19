@@ -14,7 +14,7 @@
 
 
 <p align="center">
-  <img src="documents/r_super_pdac-8.gif" width="300"/>
+  <img src="documents/r_super_pdac-8.gif" width="400"/>
 </p> 
 
 
@@ -23,10 +23,10 @@
 
 We present R-Super, a training strategy that transforms radiology reports (text) into direct (per-voxel) supervision for tumor segmentation AI. Before training, we use LLM to extract tumor information from radiology reports. Then, R-Super introduces new loss functions (Volume Loss & Ball Loss), which use this extracted information to teach the AI to segment tumors that are coherent with reports, in terms of tumor count, diameters, and locations. By merging large-scale CT-Report datasets (e.g., [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)), with small or large CT-Mask datasets (e.g., [AbdomenAtlas](https://github.com/MrGiovanni/RadGPT/), [PanTS](https://github.com/MrGiovanni/PanTS)), the peformance of tumor segmentation AI improved by up to **+16% in sensitivity, F1, AUC, DSC and NSD**. 
 
-<div align="center">
- 
-![logo](documents/rsuper_abstract.png)
-</div>
+
+<p align="center">
+  <img src="documents/rsuper_abstract.png" width="600"/>
+</p> 
 
 
 ## Paper
