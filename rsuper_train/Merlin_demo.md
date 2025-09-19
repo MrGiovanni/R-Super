@@ -67,7 +67,7 @@ env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
 ```bash
 python dataset_conversion/rename_pants.py /path/to/data/you/downloaded/PanTS/ImagesTr/
 
-python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_data/ --mapping dataset_conversion/mapping_Merlin_names_to_BDMAP_pancreas_subset.csv
+python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_data/ --mapping dataset_conversion/mapping_merlin.csv
 
 python dataset_conversion/abdomenatlas_3d.py \
     --src_path /path/to/data/you/downloaded/merlin_data/ \
@@ -92,6 +92,9 @@ The command above converts all pancreatic lesion cases in Merlin (~2K) plus ~2K 
 
 Merlin:
 ```bash
+
+python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
+
 python dataset_conversion/abdomenatlas_3d.py \
     --src_path /path/to/data/you/downloaded/merlin_data/ \
     --label_path /path/to/merlin_per_voxel_masks/ \
