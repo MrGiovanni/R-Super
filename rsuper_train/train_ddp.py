@@ -469,6 +469,9 @@ def get_parser():
                         default=None,
                         help="List of tumor types to process"
                         )
+    
+    parser.add_argument('--crop_size', default=None, type=int, help='If not None, uses a subset of the training set of the specified size')
+
 
 
     args = parser.parse_args()
@@ -536,6 +539,9 @@ def get_parser():
         #disable deep supervision
         args.clip_loss = True
         args.load_clip = True
+        
+    if args.crop_size is not None:
+        args.training_size = [args.crop_size, args.crop_size, args.crop_size] 
         
     args.batch_size_global = args.batch_size
         

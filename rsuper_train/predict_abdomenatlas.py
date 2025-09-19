@@ -353,7 +353,7 @@ def preprocess(itk_img, target_spacing, args):
 
     tensor_img, original_idx = pad_to_training_size(tensor_img, args)
 
-    return tensor_img, original_idx, origin_orientation, itk_img
+    return tensor_img, original_idx, origin_orientation, re_img_xyz
 
 def postprocess_non_binary(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing, classes, args):
     # Remove any squeezing if needed.
@@ -757,7 +757,14 @@ def init_model(args,classes,old_classes=None):
     for ckp_path in args.load:
         print('Number of classes for model loading: ', len(c))
         model = get_model(args,classes=c)
-        pth = torch.load(ckp_path, map_location=torch.device('cpu'))['model_state_dict']
+        if not args.EMA:
+            pth = torch.load(ckp_path, map_location=torch.device('cpu'))['model_state_dict']
+        else:
+            pth = torch.load(ckp_path, map_location=torch.device('cpu'))['ema_model_state_dict']
+        try:
+            pth = pth.state_dict()
+        except:
+            pass
         model.load_state_dict(pth,strict=False)
         model.cuda()
         model.eval()
@@ -774,6 +781,10 @@ def init_model(args,classes,old_classes=None):
         
 
     return model_list
+
+def _nii_stem(fn: str) -> str:
+    # convert 'adrenal_gland_left.nii.gz' -> 'adrenal_gland_left'
+    return fn[:-7] if fn.endswith('.nii.gz') else os.path.splitext(fn)[0]
 
 def nib_load(path_to_nii):
     """
@@ -835,16 +846,20 @@ def get_parser():
     parser.add_argument('--load', type=parse_model_list, default='./exp/abdomenatlas/former_batch4_pth128/fold_0_latest.pth', help='the path of trained model checkpoint. Use \',\' as the separator if load multiple checkpoints for ensemble')
     parser.add_argument('--img_path', type=str, default='/projects/bodymaps/Data/Dataset244_smallAtlasUCSF/imagesTr/', help='the path of the directory of images to be predicted')
     parser.add_argument('--save_path', type=str, default='./result/UFO/', help='the path to save predicted label')
-    
+    parser.add_argument('--learnable_loss_weights', action='store_true', help='Allows learnable loss weigths (https://arxiv.org/pdf/1705.07115).')  
+
     parser.add_argument('--ids', type=str, default=None, help='ids of testing samples')
     
     parser.add_argument('--gpu', type=str, default='0')
     parser.add_argument('--class_list', type=str, default='/projects/bodymaps/Pedro/data/atlas_300_medformer_npy/list/label_names.yaml')
     parser.add_argument('--connected_components', action='store_true', help='whether to keep the largest connected component')
-    parser.add_argument('--organ_mask_on_lesion', action='store_true', help='whether to apply organ mask on lesion segmentation')
-    parser.add_argument('--classification_branch', action='store_true', help='whether to use the classification branch (MTL baseline)')
+    parser.add_argument('--organ_mask_on_lesion', action='store_true', help='whether to keep the largest connected component')
+    parser.add_argument('--classification_branch', action='store_true', help='whether to use the classification branch')
+    parser.add_argument('--cls_gate', action='store_true', help='multiplies the segmentation sigmoid output by the classification sigmoid output--gate')
+    parser.add_argument('--cls_gate_norm', action='store_true', help='before applying the the cls gate, the segmentation output is normalized, making its maximum value above 0.5 become 1')
     parser.add_argument('--update_output_layer', action='store_true', help='update the output layer to have the same number of classes as the number of classes in the class_list')
     parser.add_argument('--old_classes', type=str, default=None, help='old classes, we will keep weights/kernels of the old classes. This parameter should be a location of a yaml file with the old classes, we will sort them!')
+    parser.add_argument('--mtl', type=str, default=None, help='multi-task learning method. If None, no MTL. Uses method from https://github.com/SamsungLabs/MTL/')
     parser.add_argument('--save_probabilities', action='store_true', help='saves probabilities')
     parser.add_argument('--not_save_binary', action='store_true', help='does not save binary')
     parser.add_argument('--save_probabilities_lesions', action='store_true', help='saves probabilities only for lesion classes')
@@ -852,12 +867,30 @@ def get_parser():
     parser.add_argument('--overwrite', action='store_true', help='overwrites last saved results')
     parser.add_argument('--save_pancreas_lesion_only', action='store_true', help='overwrites last saved results')
     parser.add_argument('--predict_pancreas_only', action='store_true', help='overwrites last saved results')
+    parser.add_argument('--epai_stage_2', action='store_true', help='only for testing epai stage 2')
     #meta
     parser.add_argument('--meta', type=str, default='/home/psalvad2/data/UCSF_metadata_filled.csv', help='meta from reports')
     parser.add_argument('--reports', type=str, default='/home/psalvad2/data/UCSFLLMOutputLarge27k.csv', help='meta from reports')
     parser.add_argument('--filter_cases_ufo', action='store_true', help='predict only cases of interest (no missing size)')
     parser.add_argument('--restrictive_filter', action='store_true', help='only consider cases that have no tumor outside of a given class list')
     parser.add_argument('--restrictive_filter_one_organ', action='store_true', help='only consider cases that tumors in a single organ')
+
+    parser.add_argument('--aggregator_mode', type=str, default='concat', help='mode for the aggregator')
+    parser.add_argument('--cls_on_output', action='store_true', help='if true, the classification branch is on the output of the model, otherwise it is on the bottleneck')
+
+    #extra classifiers on top of the segmentation output
+    parser.add_argument('--attenuation_classifier', type=str, default='none')
+    parser.add_argument('--train_att_MLP_on_mask_only', action='store_true', help='if true, the attenuation classifier MLP is trained only on the mask (segmentation) output. Otherwise, it is trained on mask and model outputs.')
+    parser.add_argument('--att_weight', type=float, default=0.01, help='weight for the tumor attenuation loss')
+    parser.add_argument('--tumor_classifier', action='store_true', help='if true, adds a tumor classifier on top of the segmentation output. The classifier classifies tumor number and diameters.')
+    parser.add_argument('--cls_weight', type=float, default=0.01, help='weight for the tumor classifier loss')
+    parser.add_argument('--organs_with_tumor', type=str, nargs='+', default=['bladder','gall_bladder','esophagus','duodenum','stomach','adrenal_gland_right','adrenal_gland_left','prostate','spleen'], help='organs that may have tumors, used in the two pass inference')
+    parser.add_argument('--disable_inference_2_stages', action='store_true', help='if not set, we run one normal inference pass, then a second pass cropping on all organs that may have tumors')
+    parser.add_argument('--EMA', action='store_true', help='If set, we test the EMA model')
+    
+    #parser.add_argument('--class_list', type=str, default='/projects/bodymaps/Pedro/data/atlas_300_medformer_multi_ch_tumor_npy/list/label_names.yaml')
+
+    
 
     args = parser.parse_args()
 
@@ -885,37 +918,42 @@ def get_parser():
     for key, value in config.items():
         setattr(args, key, value)
 
+    args.inference_2_stages=True
+    if args.disable_inference_2_stages:
+        args.inference_2_stages=False
+        print('Inference 2 stages disabled! (Why?)')
     
 
     return args
-    
 def filter_already_predicted(ids, save_path, class_list, overwrite):
     print('Filtering predicted')
     if overwrite:
         return ids
 
+    def _nii_stem(fn: str) -> str:
+        # convert 'adrenal_gland_left.nii.gz' -> 'adrenal_gland_left'
+        return fn[:-7] if fn.endswith('.nii.gz') else os.path.splitext(fn)[0]
+
     kept = []
     for img_name in ids:
-        pred_dir = os.path.join(save_path, img_name, 'predictions')
-        # No folder → must run
+        case_id = img_name.replace('/ct.nii.gz','').replace('.nii.gz','').replace('.npz','')
+        pred_dir = os.path.join(save_path, case_id, 'predictions')
+
         if not os.path.isdir(pred_dir):
             kept.append(img_name)
             continue
 
-        # One scandir → grab all .npz/.nii.gz stems
+        # Collect all .nii.gz stems
         stems = set()
         with os.scandir(pred_dir) as it:
             for entry in it:
-                name = entry.name
-                if name.endswith(('.npz', '.nii.gz')):
-                    stems.add(name.rsplit('.', 1)[0])
+                if entry.name.endswith('.nii.gz'):
+                    stems.add(_nii_stem(entry.name))
 
-        # If every class is present in that stem set, skip; else keep
-        if len(stems)==len(class_list):
-            print(f"Skipping {img_name}: found {len(class_list)} classes")
+        # Require every class to be present as a .nii.gz
+        if set(class_list).issubset(stems):
+            print(f"Skipping {img_name}: found all {len(class_list)} classes (.nii.gz only)")
         else:
-            #print('Stems:',len(stems),stems)
-            #print('Classes',len(class_list),class_list)
             kept.append(img_name)
 
     print(f"Ids after filtering: {len(kept)} / {len(ids)}")
@@ -1031,13 +1069,16 @@ if __name__ == '__main__':
 
     import tqdm
     for img_name in tqdm.tqdm(ids):
+        case_id = img_name.replace('/ct.nii.gz','').replace('.nii.gz','').replace('.npz','')
         pancreas = None
         tic = time.time()
         if not args.overwrite:
-            if os.path.exists(os.path.join(args.save_path, img_name, 'predictions')):#CCVL
-                if len(os.listdir(os.path.join(args.save_path, img_name, 'predictions')))==len(class_list):#CCVL
-                    print('Already predicted:', img_name)#CCVL
-                    continue#CCVL
+            pred_dir = os.path.join(args.save_path, case_id, 'predictions')
+            if os.path.isdir(pred_dir):
+                present = {_nii_stem(f) for f in os.listdir(pred_dir) if f.endswith('.nii.gz')}
+                if set(class_list).issubset(present):
+                    print('Already predicted:', img_name)
+                    continue
     	
         print(f"Start processing {img_name}")
         if 'nii.gz' in img_name:
@@ -1078,16 +1119,16 @@ if __name__ == '__main__':
                 pancreas = labels[sorted(class_list).index('pancreas')]
                 pancreas = torch.from_numpy(pancreas).cuda().float()
             
-        #pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)    
-        try:
-            pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)
-            print('Predicted case:', img_name)
-        except:
-            print('FAILED')
-            #raise ValueError('Failed to predict case:', img_name)
-            with open('prediction_errors.txt', "a") as f:
-                f.write(str(os.path.join(args.img_path, img_name, 'ct.nii.gz')) + "\n")
-            continue
+        pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)    
+        #try:
+        #    pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)
+        #    print('Predicted case:', img_name)
+        #except:
+        #    print('FAILED')
+        #    #raise ValueError('Failed to predict case:', img_name)
+        #    with open('prediction_errors.txt', "a") as f:
+        #        f.write(str(os.path.join(args.img_path, img_name, 'ct.nii.gz')) + "\n")
+        #    continue
         
 
 
@@ -1106,8 +1147,8 @@ if __name__ == '__main__':
 
         toc = time.time()
         
-        if not os.path.exists(os.path.join(args.save_path, img_name, 'predictions')):
-            os.makedirs(os.path.join(args.save_path, img_name, 'predictions'))
+        if not os.path.exists(os.path.join(args.save_path, case_id, 'predictions')):
+            os.makedirs(os.path.join(args.save_path, case_id, 'predictions'))
             
             
         if args.save_pancreas_lesion_only:
@@ -1120,11 +1161,11 @@ if __name__ == '__main__':
         if not args.not_save_binary:
             for key in pred_dict.keys():
                 if 'nii.gz' in img_name:
-                    sitk.WriteImage(pred_dict[key], os.path.join(args.save_path, img_name, 'predictions', f"{key}.nii.gz"))
+                    sitk.WriteImage(pred_dict[key], os.path.join(args.save_path, case_id, 'predictions', f"{key}.nii.gz"))
                 else:
-                    np.savez(os.path.join(args.save_path, img_name, 'predictions', f"{key}.npz"), pred_dict[key])
+                    #np.savez(os.path.join(args.save_path, case_id, 'predictions', f"{key}.npz"), pred_dict[key])
                     #use nib to save a nii.gz version too
-                    nib.save(nib.Nifti1Image(pred_dict[key], np.eye(4)), os.path.join(args.save_path, img_name, 'predictions', f"{key}.nii.gz"))
+                    nib.save(nib.Nifti1Image(pred_dict[key], np.eye(4)), os.path.join(args.save_path, case_id, 'predictions', f"{key}.nii.gz"))
 
         if args.save_probabilities:
             if 'nii.gz' in img_name:
@@ -1138,15 +1179,15 @@ if __name__ == '__main__':
                     if 'pancrea' in key:
                         tmp[key] = pred_raw_dict[key]
                 pred_raw_dict = tmp
-            if not os.path.exists(os.path.join(args.save_path, img_name, 'predictions_raw')):
-                os.makedirs(os.path.join(args.save_path, img_name, 'predictions_raw'))
+            if not os.path.exists(os.path.join(args.save_path, case_id, 'predictions_raw')):
+                os.makedirs(os.path.join(args.save_path, case_id, 'predictions_raw'))
             for key in pred_raw_dict.keys():
                 if 'nii.gz' in img_name:
-                    sitk.WriteImage(pred_raw_dict[key], os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.nii.gz"))
+                    sitk.WriteImage(pred_raw_dict[key], os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.nii.gz"))
                 else:
-                    np.savez(os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.npz"), pred_raw_dict[key])
+                    #np.savez(os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.npz"), pred_raw_dict[key])
                     #use nib to save a nii.gz version too
-                    nib.save(nib.Nifti1Image(pred_raw_dict[key], np.eye(4)), os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.nii.gz"))
+                    nib.save(nib.Nifti1Image(pred_raw_dict[key], np.eye(4)), os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.nii.gz"))
         
         if args.save_probabilities_lesions or args.save_probabilities_report_tumors_only:
             if 'nii.gz' in img_name:
@@ -1161,24 +1202,26 @@ if __name__ == '__main__':
                         tmp[key] = pred_raw_dict[key]
                 pred_raw_dict = tmp
 
-            if not os.path.exists(os.path.join(args.save_path, img_name, 'predictions_raw')):
-                os.makedirs(os.path.join(args.save_path, img_name, 'predictions_raw'))
+            if not os.path.exists(os.path.join(args.save_path, case_id, 'predictions_raw')):
+                os.makedirs(os.path.join(args.save_path, case_id, 'predictions_raw'))
             for key in pred_raw_dict.keys():
                 if ('lesion' not in key) and ('pdac' not in key) and ('pnet' not in key) and ('cyst' not in key):
                     continue
                 if args.save_probabilities_report_tumors_only:
                     column = f'number of {key.replace("_", " ").replace("adrenal","adrenal gland")} instances'
                     lesions= meta.loc[img_name[:len('BDMAP_00052990')], column]
-                    #print(f'Number of {key.replace("_", " ")} lesions: {lesions}')
-                    if meta.loc[img_name[:len('BDMAP_00052990')], column] == 0:
+                    # If more than one row matched, keep the first value (clean your data!!)
+                    if isinstance(lesions, pd.Series):
+                        lesions = lesions.iloc[0]
+                    if lesions == 0:
                         continue
                 
                 if 'nii.gz' in img_name:
-                    sitk.WriteImage(pred_raw_dict[key], os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.nii.gz"))
+                    sitk.WriteImage(pred_raw_dict[key], os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.nii.gz"))
                 else:
-                    np.savez(os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.npz"), pred_raw_dict[key])
+                    #np.savez(os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.npz"), pred_raw_dict[key])
                     #use nib to save a nii.gz version too
-                    nib.save(nib.Nifti1Image(pred_raw_dict[key], np.eye(4)), os.path.join(args.save_path, img_name, 'predictions_raw', f"{key}.nii.gz"))
+                    nib.save(nib.Nifti1Image(pred_raw_dict[key], np.eye(4)), os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.nii.gz"))
         
         print(f"{img_name} finished. Process time: {toc-tic}s")
 

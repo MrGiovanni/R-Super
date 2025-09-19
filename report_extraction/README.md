@@ -1,6 +1,12 @@
+<div align="center">
+  <img src="../documents/logo.png" alt="logo" width="100" />
+</div>
+
 # Use LLM to extract tumor information from radiology reports
 
-Here, we will use an LLM to read radiology reports and extract tumor information (count, diameters and locations). Later, this information will be used to train the segmentation model.
+We use Llama 3.1 (zero-shot) and radiologist-designed prompts to extract tumor information (count, diameters, locations) from free-text radiology reports. We run the LLM *only once*, and store its outputs. Later, this information will be used by our new loss functions to train the segmentation model.
+
+> **Merlin:** We already ran our LLM over the entire Melrin dataset, extracting information about multiple tumor types. So, for Merlin, you can skip this readme and just get the LLM outputs, which are the .csv files [here](../rsuper_train/Merlin_metadata_hf_clean.csv)
 
 ## Install
 
@@ -95,8 +101,13 @@ In case you need to continue LaunchMultiGPUFlex.sh from a previous run, just run
 
 ## Postprocess
 
-The command below post-processes the LLM answers.
+The commands below post-processes the LLM answers.
 
 ```bash
 python postprocess.py -i /path/to/output_LLM.csv -o /path/to/output_LLM_post.csv
+
+python create_metadata.py --from_scratch --LLM_out /path/to/output_LLM_post.csv --output_per_tumor /path/to/LLM_per_tumor_metadata.csv --output /path/to/LLM_per_CT_metadata.csv
 ```
+Final outputs:
+- **LLM_per_tumor_metadata.csv**: a table with one row per tumor found in the reports. So, the same CT scan can appear in many rows, if it has many tumors. This is a detailed metadata, mostly used by our training losses.
+- **LLM_per_CT_metadata.csv**: more summarized metadata, with one row per CT scans. Summarizes for example, how many tumors each CT shows in each organ. 

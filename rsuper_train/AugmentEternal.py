@@ -41,7 +41,8 @@ def main():
                         help="List of tumor types to process. No need to set for deault kidney and pancreas."
                         )
     parser.add_argument('--reports', default=None, help='path to reports')
-    
+    parser.add_argument('--crop_size', default=None, type=int, help='If not None, uses a subset of the training set of the specified size')
+
     args = parser.parse_args()
 
     reports = args.reports
@@ -79,6 +80,8 @@ def main():
         args.jhh_root = jhh_root
     if reports is not None:
         args.reports = reports
+    if args.crop_size is not None:
+        args.training_size = [args.crop_size, args.crop_size, args.crop_size]
 
     # Create the training dataset
     if args.dataset == 'atlas300' or args.dataset == 'atlas':

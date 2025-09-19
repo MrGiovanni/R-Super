@@ -60,10 +60,13 @@ def get_dataset(args, mode, **kwargs):
         elif args.dataset == 'abdomenatlas_ufo':
             from .dim3.dataset_abdomenatlas_UFO import AbdomenAtlasDataset
             
+            
             if args.pancreas_only:
                 tumor_classes=['pancreas']
             elif args.kidney_only:
                 tumor_classes=['kidney']
+            elif hasattr(args,'tumor_classes'):
+                tumor_classes=args.tumor_classes
             else:
                 tumor_classes=None
             

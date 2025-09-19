@@ -1774,10 +1774,10 @@ def ball_loss(out, labels, unk_voxels, chosen_segment_mask, tumor_volumes, tumor
         if apply_dice_loss:
             #remove tumor surroundings, to avoid penalizing them: we are not super sure if this region is tumor or not.
             dice_loss = DiceLossMultiClass(preds=x, targets=pseudo_mask, known_voxels=penalize,sigmoid=sigmoid,class_weights=c_weight)
-            #if sigmoid:
-            #    print('Dice loss:',dice_loss, 'Mean prediction:',torch.sigmoid(x).mean())
-            #else:
-            #    print('Dice loss:',dice_loss, 'Mean prediction:',x.mean())
+            if sigmoid:
+                print('Dice loss:',dice_loss, 'Mean prediction:',torch.sigmoid(x).mean())
+            else:
+                print('Dice loss:',dice_loss, 'Mean prediction:',x.mean())
             #we make all voxels knwon because we alreay removed unknown voxels from x
             #print('Using dice loss inside the ball loss')
 

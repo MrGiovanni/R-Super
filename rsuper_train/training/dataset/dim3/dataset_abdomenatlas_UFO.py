@@ -45,7 +45,7 @@ def normalize_no_lesion(col: pd.Series) -> pd.Series:
 
     return out
 
-def clean_ufo(reports,annotated_tumors):
+def clean_ufo(reports,annotated_tumors,limit_healthy=True):
     """
     This function gets a list of reports and removes cases of no interest:
     - We get the healthy patients
@@ -55,11 +55,14 @@ def clean_ufo(reports,annotated_tumors):
     """
     
     #drop LLM hallucinations
+    print(f'Number of BDMAP ID input: {reports["BDMAP_ID"].nunique()}')
     hallucination=reports[(reports['Tumor Size (mm)'].astype(str).str.contains(r'^0\.0\s*x', regex=True, na=False)) | (reports['Tumor Size (mm)']=='0.0') | (reports['Tumor Size (mm)']=='0')]
     reports = reports[~reports['BDMAP_ID'].isin(hallucination['BDMAP_ID'].tolist())]
+    print(f'Number of BDMAP ID after dropping LLM hallucinations: {reports["BDMAP_ID"].nunique()}')
 
     #ignore TUMORS (not patients here) in organs not in annotated_tumors
     reports = reports[reports['Standardized Organ'].isin(annotated_tumors) | normalize_no_lesion(reports['no lesion'])]
+    print(f'Number of BDMAP ID after dropping tumors not considered here: {reports["BDMAP_ID"].nunique()}')
 
     #now drop from reports any CT scan (BDMAP_ID) where any row has no number in 'Tumor Size (mm)' or 'Unknow Tumor Size' is not 'no'
     # consider only tumor rows (exclude healthy)
@@ -86,6 +89,7 @@ def clean_ufo(reports,annotated_tumors):
     # drop all offending BDMAP_IDs
     drop_ids = set(bad_size_ids).union(bad_lr_ids)
     reports = reports[~reports['BDMAP_ID'].isin(drop_ids)]
+    print(f'Number of BDMAP ID after removing cases w/o size: {reports["BDMAP_ID"].nunique()}')
 
     interest = {}
     
@@ -99,6 +103,11 @@ def clean_ufo(reports,annotated_tumors):
         print('Number of useful cases for %s: %s'%(organ, interest[organ]['BDMAP_ID'].nunique()))
 
     interest['healthy'] = reports[reports['no lesion'] == True]
+    if limit_healthy:
+        #limit number of healthy cases to the maximum of tumor cases we have
+        max_tumor_cases = max([v['BDMAP_ID'].nunique() for k,v in interest.items() if k != 'healthy'])
+        if interest['healthy']['BDMAP_ID'].nunique() > max_tumor_cases:
+            interest['healthy'] = interest['healthy'].sample(n=max_tumor_cases, random_state=42)
     print('Number of healthy cases:', interest['healthy']['BDMAP_ID'].nunique())
     #concat
     tumors_per_type = {}
@@ -135,6 +144,8 @@ class AbdomenAtlasDataset(Dataset):
         self.save_augmented = save_augmented
         self.tumor_class_names = tumor_classes
         self.reports = pd.read_csv(args.reports)
+        if 'BDMAP ID' in self.reports.columns:
+            self.reports = self.reports.rename(columns={'BDMAP ID':'BDMAP_ID'})
         print('Reports loaded from:', args.reports, flush=True, file=sys.stderr)
         print('Number of reports:', len(self.reports), flush=True, file=sys.stderr)
         self.tumor_classes=tumor_classes
@@ -142,20 +153,24 @@ class AbdomenAtlasDataset(Dataset):
         assert mode in ['train', 'test']
         self.counter=0
 
-        with open(os.path.join(args.data_root, 'list', 'dataset.yaml'), 'r') as f:
-            atlas_name_list = yaml.load(f, Loader=yaml.SafeLoader)
+        atlas_name_list = list(set([f[:len('BDMAP_00000000')] for f in os.listdir(args.data_root) if 'BDMAP' in f and '_gt' in f]))
+        atlas_name_list_2 = list(set([f[:len('BDMAP_00000000')] for f in os.listdir(args.data_root) if 'BDMAP' in f and '_gt' not in f]))
+        atlas_name_list = list(set(atlas_name_list).intersection(set(atlas_name_list_2)))
            #print('Number of Atlas Images:', len(atlas_name_list), flush=True, file=sys.stderr)
-
-        with open(os.path.join(args.UFO_root, 'list', 'dataset.yaml'), 'r') as f:
-            img_name_list_UFO = yaml.load(f, Loader=yaml.SafeLoader)
+        img_name_list_UFO = list(set([f[:len('BDMAP_00000000')] for f in os.listdir(args.UFO_root) if 'BDMAP' in f and '_gt' in f]))
+        img_name_list_UFO_2 = list(set([f[:len('BDMAP_00000000')] for f in os.listdir(args.UFO_root) if 'BDMAP' in f and '_gt' not in f]))
+        img_name_list_UFO = list(set(img_name_list_UFO).intersection(set(img_name_list_UFO_2)))
            #print('UFO root:', args.UFO_root, flush=True, file=sys.stderr)
            #print('Number of UFO Images:', len(img_name_list_UFO), flush=True, file=sys.stderr)
 
         #from reports, get only those in the dataset
         ids = [case.replace('_0000.nii.gz','').replace('.nii.gz','') for case in img_name_list_UFO]
+        print('NUMBER OF UFO IDs img_name_list_UFO:', len(ids), flush=True, file=sys.stderr)
 
         if args.ucsf_ids is not None:
             cases = pd.read_csv(args.ucsf_ids)
+            if 'BDMAP ID' in cases.columns:
+                cases = cases.rename(columns={'BDMAP ID':'BDMAP_ID'})
             cases = cases['BDMAP_ID'].tolist()
             ids = [case for case in ids if case in cases]
             #filter out img_name_list_UFO
@@ -283,6 +298,10 @@ class AbdomenAtlasDataset(Dataset):
             classes_UFO = yaml.load(f, Loader=yaml.SafeLoader)
             #sort--we sorted when saving in nii2npy.py
             classes_UFO = sorted(classes_UFO)
+            
+        for c in classes_UFO:
+            if 'lesion' in c.lower() or ' tumor' in c.lower() or ' mass' in c.lower() or 'cyst' in c.lower() or 'pdac' in c.lower() or 'pnet' in c.lower():
+                raise ValueError('UFO classes should not contain tumor or lesion classe. our assumption is that the UFO data does not have lesions annotated per voxel. Classes found:', classes_UFO)
 
         self.classes = classes
         self.classes_UFO = classes_UFO
@@ -444,8 +463,7 @@ class AbdomenAtlasDataset(Dataset):
             classes = self.classes
 
         if np_lab.shape[0] != len(classes):
-            ##print('Shape before unpack:', np_lab.shape, flush=True, file=sys.stderr)
-            start_unpack = time.time()
+            print('Shape before unpack:', np_lab.shape, flush=True, file=sys.stderr)
             # 4. Unpack the bits along the same axis.
             np_lab = np.unpackbits(np_lab, axis=0)
             assert np_lab.shape[0] < len(classes) +10
@@ -525,7 +543,7 @@ class AbdomenAtlasDataset(Dataset):
 
         if self.mode == 'train':
             ##print('Shapes:', tensor_img.shape, tensor_lab.shape)
-            self.SanityAssertOutput(tensor_lab, unk_channels_tensor,torch.tensor(tumor_volumes_in_crop).float(),chosen_segment_mask.float())
+            self.SanityAssertOutput(tensor_lab, unk_channels_tensor,torch.tensor(tumor_volumes_in_crop).float(),chosen_segment_mask.float(),selected_tumor=selected_tumor)
             if self.generate_pair is not None:
                 tensor_img, tensor_lab = self.generate_pair(tensor_img.cpu().numpy())
                 tensor_img, tensor_lab = torch.from_numpy(tensor_img).float(), torch.from_numpy(tensor_lab).float()
@@ -559,7 +577,10 @@ class AbdomenAtlasDataset(Dataset):
             tensor_img, tensor_lab = augmentation.crop_3d(tensor_img, tensor_lab, [d, h, w], mode='random')
         return tensor_img, tensor_lab
     
-    def random_crop_on_tumor(self, tensor_img, tensor_lab, d, h, w, fallback_crop=False):
+    def random_crop_on_tumor(self, tensor_img, tensor_lab, d, h, w, fallback_crop=False,
+                             ufo=False, tumor_case=None):
+        
+        
         
         forg=[]
         for c in self.tumor_class_names:
@@ -574,22 +595,17 @@ class AbdomenAtlasDataset(Dataset):
                 forg.append(c)
         forg = list(set(forg))
         #now we need the indexes
-        if tensor_lab.shape[1] == len(self.classes_UFO):
+        if ufo:
             cls = self.classes_UFO
             lesion_classes = []
-        elif tensor_lab.shape[1] == len(self.classes):
+        else:
             cls = self.classes
             lesion_classes = self.lesion_classes
-        else:
-            raise ValueError('Label tensor must have %s channels, but got %s channels'%(len(self.classes_UFO), tensor_lab.shape[1]))
         forg = [cls.index(c) for c in forg]#we have only atlas here
         
-        if fallback_crop:
-            tumor_case = False
-            print('Fallback crop', flush=True, file=sys.stderr)
-        else:
-            tumor_case = tensor_lab[:,self.lesion_classes].sum()>0
-        
+        if tumor_case is None:
+            tumor_case = tensor_lab[:,lesion_classes].sum()>0
+            
         if np.random.random() < 0.4:
             #crop large, then rotate and crop small
             assert len(tensor_lab.shape) == 5
@@ -824,7 +840,7 @@ class AbdomenAtlasDataset(Dataset):
             #10% random crop probability is already inside the augmentation.random_crop_on_tumor
             error=False
             try:
-                tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w)
+                tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, ufo=False)
             except:
                 error=True
                 #print('Error cropping on tumor for:', self.img_list[idx], flush=True, file=sys.stderr)
@@ -846,7 +862,7 @@ class AbdomenAtlasDataset(Dataset):
                 segment_options=segments['subseg_with_only_known_sizes']
             else:
                 #no tumor, do random cropping
-                tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w,fallback_crop=True)
+                tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w,tumor_case=False,ufo=True)
                 return tensor_img, tensor_lab, tumor_dict, 'random'
             
             #crop around the tumor organ/subsegment 
@@ -871,7 +887,7 @@ class AbdomenAtlasDataset(Dataset):
                     #remove tumor_segment from segment_options
                     segment_options = [seg for seg in segment_options if seg not in [tumor_segment]]
                     if len(segment_options)==0:
-                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
+                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, tumor_case=False,ufo=True)
                         print('Random crop because of empty mask', flush=True, file=sys.stderr)
                         return tensor_img, tensor_lab, tumor_dict, 'random'
                     else:
@@ -879,7 +895,7 @@ class AbdomenAtlasDataset(Dataset):
                         tumor_segment_mask=self.get_random_tumor_seg_mask(tensor_lab, tumor_segment,classes=self.classes_UFO)
                         if tumor_segment_mask.sum().item()==0.0:
                             #random crop
-                            tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
+                            tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, tumor_case=False,ufo=True)
                             print('Random crop because of empty mask', flush=True, file=sys.stderr)
                             return tensor_img, tensor_lab, tumor_dict, 'random'
 
@@ -894,14 +910,14 @@ class AbdomenAtlasDataset(Dataset):
                     if len(segment_options)==1:
                         #random crop 
                         print('Error cropping around tumor for:'+self.img_list[idx]+'---'+out, flush=True, file=sys.stderr)
-                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
+                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, tumor_case=False,ufo=True)
                         return tensor_img, tensor_lab, tumor_dict, 'random'
                     #select another tumor segment
                     #get a random segment that is not in tumor_segment
                     segment_options = [seg for seg in segment_options if seg not in [tumor_segment]]
                     if len(segment_options)==0:
                         print('Error cropping around tumor for:'+self.img_list[idx]+'---'+out, flush=True, file=sys.stderr)
-                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
+                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, tumor_case=False,ufo=True)
                         return tensor_img, tensor_lab, tumor_dict, 'random'
                     tumor_segment = random.choice(segment_options)
                     #get the mask for the tumor segment
@@ -914,7 +930,7 @@ class AbdomenAtlasDataset(Dataset):
                     else:
                         print('Error cropping around tumor for:'+self.img_list[idx]+'---'+out, flush=True, file=sys.stderr)
                         #random crop
-                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, fallback_crop=True)
+                        tensor_img, tensor_lab = self.random_crop_on_tumor(tensor_img, tensor_lab, d, h, w, tumor_case=False,ufo=True)
                         return tensor_img, tensor_lab, tumor_dict, 'random'
 
     def save(self, tensor_img, tensor_lab, idx, tumor_dict=None, dta=None, unk_channels_tensor=None,
@@ -1089,7 +1105,7 @@ class AbdomenAtlasDataset(Dataset):
                 else:
                     chosen_segment_mask=self.get_chosen_segment_mask(tensor_lab, dta['tumor_in_crop'])
             #print('LOADED AUGMENTED DATA', tensor_lab.shape, 'From:', os.path.join(self.save_destination, base_lab_name), flush=True, file=sys.stderr)
-            self.SanityAssertOutput(tensor_lab, unk_channels_list, torch.tensor(tumor_volumes_in_crop).float(), chosen_segment_mask.float())
+            self.SanityAssertOutput(tensor_lab, unk_channels_list, torch.tensor(tumor_volumes_in_crop).float(), chosen_segment_mask.float(),selected_tumor='')
             if self.generate_pair is not None:
                 tensor_img, tensor_lab = self.generate_pair(tensor_img.cpu().numpy())
                 tensor_img, tensor_lab = torch.from_numpy(tensor_img).float(), torch.from_numpy(tensor_lab).float()
@@ -1200,6 +1216,7 @@ class AbdomenAtlasDataset(Dataset):
                     unk_segments['liver'][tensor_lab[seg_idx]>0]=1
                 elif 'pancreas' in seg:
                     unk_segments['pancreas'][tensor_lab[seg_idx]>0]=1
+                    #print(f"we have included to unk_segments[pancreas] the segment {seg}, the sum of unk_segments['pancreas'] is {unk_segments['pancreas'].sum().item()}", flush=True, file=sys.stderr)
                 elif 'kidney' in seg:
                     unk_segments['kidney'][tensor_lab[seg_idx]>0]=1
                 else:
@@ -1220,6 +1237,7 @@ class AbdomenAtlasDataset(Dataset):
         label=[]
         #print('Shape of tensor_lab before assigning labels:', tensor_lab.shape, flush=True, file=sys.stderr)
         assert len(tensor_lab.shape) == 4
+        #print(f'Iterating over these classes: {self.classes}', flush=True, file=sys.stderr)
         for j,clss in enumerate(self.classes,0):
             if clss in self.classes_UFO:
                 label.append(tensor_lab[clss_UFO_to_idx[clss]])
@@ -1247,6 +1265,7 @@ class AbdomenAtlasDataset(Dataset):
 
                 else:
                     #check if there is a tumorous segment for this lesion in the crop
+                    #print(f'Iterating on lesion class {clss}', flush=True, file=sys.stderr)
                     tumor_present=False
                     for organ in unk_lesions:
                         if organ in clss:
@@ -1255,6 +1274,7 @@ class AbdomenAtlasDataset(Dataset):
                             if 'liver' in clss:
                                 unk_channels_list.append(unk_segments['liver'])#make only the pixels with unknown tumor location be 1, background pixels are 0
                             elif 'pancreatic' in clss:
+                                #print(f'We have included the unk_segments[pancreas] in unk_channels_list')
                                 unk_channels_list.append(unk_segments['pancreas'])#make only the pixels with unknown tumor location be 1, background pixels are 0
                             elif 'kidney' in clss:
                                 unk_channels_list.append(unk_segments['kidney'])#make only the pixels with unknown tumor location be 1, background pixels are 0
@@ -1273,7 +1293,8 @@ class AbdomenAtlasDataset(Dataset):
         assert len(label.shape) == 4
         #print('Shape of tensor_lab after assigning labels:', label.shape, flush=True, file=sys.stderr)
         #print('Unk channels:', unk_channels, flush=True, file=sys.stderr)
-        assert unk_channels_list.sum().item()!=0
+        if len(unk_lesions)>0:
+            assert unk_channels_list.sum()>0, f'unk_channels_list should have some non-zero voxels if there are tumors in the crop, case {self.current_sample}, we have tumors in {unk_lesions} and unk_channels_list.sum={unk_channels_list.sum().item()}'
         return label,unk_channels,unk_channels_list.type_as(label)
     
     def define_unknown_voxels(self, label, idx):
@@ -1393,7 +1414,8 @@ class AbdomenAtlasDataset(Dataset):
             
         return volumes,torch.tensor(diameters).float()
     
-    def SanityAssertOutput(self, tensor_lab, unk_channels_tensor,tumor_volumes_in_crop,chosen_segment_mask):
+    def SanityAssertOutput(self, tensor_lab, unk_channels_tensor,tumor_volumes_in_crop,chosen_segment_mask,
+                            selected_tumor):
                                 #tensor_lab, unk_channels_list, torch.tensor(tumor_volumes_in_crop).float(), chosen_segment_mask.float()
         classes=sorted(self.classes)
         #assert shapes
@@ -1408,9 +1430,16 @@ class AbdomenAtlasDataset(Dataset):
         sample=self.current_sample
         sample=sample[sample.rfind('BDMAP_'):sample.rfind('.')]
         if self.counter<10:
-            debug_save_labels(tensor_lab,sample+'_y',self.classes)
-            debug_save_labels(chosen_segment_mask,sample+'_chosen_segment_mask',self.classes)
-            debug_save_labels(unk_channels_tensor,sample+'_unk_voxels',self.classes)
+            if selected_tumor is not None and len(selected_tumor)>0:
+                if isinstance(selected_tumor,list):
+                    selected_tumor = selected_tumor[0]
+                debug_save_labels(tensor_lab,sample+'_y_cropped_on_'+selected_tumor,self.classes)
+                debug_save_labels(chosen_segment_mask,sample+'_chosen_segment_mask_cropped_on_'+selected_tumor,self.classes)
+                debug_save_labels(unk_channels_tensor,sample+'_unk_voxels_cropped_on_'+selected_tumor,self.classes)
+            else:
+                debug_save_labels(tensor_lab,sample+'_y',self.classes)
+                debug_save_labels(chosen_segment_mask,sample+'_chosen_segment_mask',self.classes)
+                debug_save_labels(unk_channels_tensor,sample+'_unk_voxels',self.classes)
             self.counter+=1
 
         #assert that unk_channels_tensor and chosen_segment_mask are 0 for all non lesion classes

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../documents/logo.png" alt="logo" width="200" />
+  <img src="../documents/logo.png" alt="logo" width="100" />
 </div>
 
 # Training and Testing R-Super
@@ -13,6 +13,18 @@ The core of R-Super is its new report supervision loss functions: the Ball Loss 
 1) Just copy our loss functions to your own code. They are at: [rsuper_train/training/losses_foundation.py](rsuper_train/training/losses_foundation.py). The Volume Loss is the function volume_loss_basic, and the Ball Loss is the function ball_loss. To use the losses, first use LLMs to read reports and create organ masks (steps 1 and 2 below). You will also need to prepare your dataset to send these organ masks and report information to the losses (see [rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py](rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py)).
 2) **Alternativelly, it may be easier to add your architecture to our code.** To do so, just substitute 'class MedFormer(nn.Module)' in [rsuper_train/model/dim3/medformer.py](rsuper_train/model/dim3/medformer.py) by your own architecture. Just format the output of your architecture like we do (check the function prepare_return). After substituting your architecture in our code, just run the steps below to train it with report supervision.
 </details>
+
+> **Public Demo (w/ Merlin and AbdomenAtlas 2.0).** This readme has details that can help you deeply understand R-Super and use it in your own data. Please [**click here for a simple demo**](Merlin_demo.md), which shows you how to quickly train and test R-Super using public datasets (Merlin and AbdomenAtlas 2.0)!
+
+#### Volume Loss
+<div align="center">
+  <img src="../documents/volume_loss.png" alt="logo" width="600" />
+</div>
+
+#### Ball Loss
+<div align="center">
+  <img src="../documents/ball_loss.png" alt="logo" width="600" />
+</div>
 
 ## Installation
 
@@ -41,7 +53,7 @@ pip install -r requirements.txt
 ## Data preparation
 
 
-**1-Dataset format.** Assemble your datasets in the format below. We consider that you have a dataset of CT-Mask pairs (e.g., [MSD](http://medicaldecathlon.com), [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/)) and a dataset of CT-Report pairs (e.g., [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/), [CT-Rate](https://huggingface.co/datasets/ibrahimhamamci/CT-RATE), [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)). In this case, you will need organ segmentation masks for both (see [organ_masks](../organ_masks/README.md) to create them). Organize both in the format below, in different paths (e.g., dataset_masks and dataset_reports). *Repeat steps 2, 3 and 4 (below) for each of the datasets.* We will call the outputs dataset_masks_npz and dataset_reports_npz.
+**1-Dataset format.** Assemble your datasets in the format below. We consider that you have a dataset of CT-Mask pairs (e.g., [MSD](http://medicaldecathlon.com), [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/)) and a dataset of CT-Report pairs (e.g., [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/), [CT-Rate](https://huggingface.co/datasets/ibrahimhamamci/CT-RATE), [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)). In this case, you will need organ segmentation masks for both (see [organ_masks](../organ_masks/README.md) to create them). Organize both in the format below, in different paths (e.g., dataset_masks and dataset_reports). *Repeat steps 2, 3 and 4 (below) for each of the datasets.* We will call the outputs dataset_masks_npz and dataset_reports_npz.
 
 <details>
 <summary style="margin-left: 25px;">Dataset format.</summary>
@@ -82,7 +94,7 @@ pip install -r requirements.txt
 
 
 
-Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. You must not have lesion masks in the dataset annotated with reports---if you use empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!
+Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. *You must not have lesion masks in the dataset annotated with reports---if you use empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!*
 
 
 **2-Convert to npz.** Convert from nii.gz to npz. This is the standard format for MedFormer and nnU-Net preprocessed.
@@ -95,7 +107,6 @@ cd ..
 
 
 
-
 ## Train
 
 R-Super trains in two steps. First, with only the CT scans with tumor segmentation masks. We assume this data is in '/path/to/dataset_masks_npz/', it should include tumor patients and healthy patients.
@@ -104,10 +115,10 @@ R-Super trains in two steps. First, with only the CT scans with tumor segmentati
 The code bellow will start a python process that will keep running forever (you can stop it with 'pkill -f rsuper'). This process will keep performing data augmentation and saving the augmented data to disk. *Always deep it running while you train. Restart it in case it stops.* This code uses only CPU, no GPU.
 
 ```bash
-python AugmentEternal.py --dataset atlas_ufo --model medformer --dimension 3d --batch_size 2 --crop_on_tumor --workers_overwrite 4 --save_destination /path/to/augmented_dataset_masks_and_reports/ --dataset_path /path/to/dataset_masks_npz/ --UFO_root /path/to/dataset_reports_npz/  --reports /path/to/output_LLM_post.csv &
+python AugmentEternal.py --dataset atlas_ufo --model medformer --dimension 3d --batch_size 2 --crop_on_tumor --workers_overwrite 4 --save_destination /path/to/augmented_dataset_masks_and_reports/ --dataset_path /path/to/dataset_masks_npz/ --UFO_root /path/to/dataset_reports_npz/  --reports /path/to/LLM_per_CT_metadata.csv &
 ```
 
-- /path/to/output_LLM_post.csv: path to the output of the LLM analysis of reports, see [report_extraction](../report_extraction/README.md)
+- /path/to/LLM_per_CT_metadata.csv: path to the output of the LLM analysis of reports, see [report_extraction](../report_extraction/README.md)
 
 <details>
 <summary style="margin-left: 25px;">Why a separate command for data augmentation?</summary>
@@ -157,7 +168,7 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 **3- Train with Reports and Masks.**
 
 ```bash
-python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d --batch_size 2 --unique_name mask_and_report_model_name  --crop_on_tumor --gpu '0' --workers 2 --load_augmented  --pretrain --pretrained exp/abdomenatlas/mask_only_model_name/fold_0_latest.pth --loss ball_dice_last --dist_url tcp://127.0.0.1:8002 --report_volume_loss_basic 0.1  --save_destination /path/to/augmented_dataset_masks_and_reports/ --data_root /path/to/dataset_masks_npz/ --UFO_root /path/to/dataset_reports_npz/ --epochs 100 --lr 0.0001 --reports /path/to/output_LLM_post.csv
+python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d --batch_size 2 --unique_name mask_and_report_model_name  --crop_on_tumor --gpu '0' --workers 2 --load_augmented  --pretrain --pretrained exp/abdomenatlas/mask_only_model_name/fold_0_latest.pth --loss ball_dice_last --dist_url tcp://127.0.0.1:8002 --report_volume_loss_basic 0.1  --save_destination /path/to/augmented_dataset_masks_and_reports/ --data_root /path/to/dataset_masks_npz/ --UFO_root /path/to/dataset_reports_npz/ --epochs 100 --lr 0.0001 --reports /path/to/LLM_per_CT_metadata.csv
 ```
 
 
@@ -165,7 +176,7 @@ python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d 
 <summary style="margin-left: 25px;"> Other important arguments and GPUs</summary>
 <div style="margin-left: 25px;">
 
-- /path/to/output_LLM_post.csv: path to the output of the LLM analysis of reports, see [report_extraction](../report_extraction/README.md)
+- /path/to/LLM_per_CT_metadata.csv: path to the output of the LLM analysis of reports, see [report_extraction](../report_extraction/README.md)
 - dataset: set to abdomenatlas for training with CT-Mask pairs. This argument is used to select the PyTorch Dataset. It will use the dataset in data_root and save_destination, not the AbdomenAtlas dataset
 - model: the architecture to be used. We use medformer (other options are not implemented yet). You can implement your own architecture by changing the 'class MedFormer(nn.Module)' in [model/dim3/medformer.py](model/dim3/medformer.py). Just format the output of your architecture like we do (check the function prepare_return)
 - batch_size: batch size per gpu
@@ -215,10 +226,10 @@ The code below checks the saved predictions, and calculates tumor volume for dif
 python eval_AUC.py --outputs_folder /path/to/inference/output/ --ct_folder /path/to/test/dataset/
 ```
 
-The next code read the saved volumes and a metdatada csv file that says if each case has cancer or not. It uses this information to calculate sensitivity, specificity and F1 at many volume and confidence thresholds (logits->sigmoid->condifence scores->confidence th->binary mask->volume th->cancer/no cancer). metadata.csv is the ground-truth, it must have columns 'called number of {organ} lesion instances' (organ=kidney/pancreatic). You can easily extract this information using LLMs, just follow the procedure in [../report_extraction/README.md](../report_extraction/README.md). This LLM-based evaluation procedure was proposed in [AbdomenAtlas 3.0](https://github.com/mrgiovanni/radgpt).
+The next code read the saved volumes and a metdatada csv file that says if each case has cancer or not. It uses this information to calculate sensitivity, specificity and F1 at many volume and confidence thresholds (logits->sigmoid->condifence scores->confidence th->binary mask->volume th->cancer/no cancer). LLM_per_CT_metadata is the ground-truth, it must have columns called 'number of {organ} lesion instances' (organ=kidney/pancreatic), with the number of lesions found in each CT, according to their reports. You can easily extract this information using LLMs, just follow the procedure in [../report_extraction/README.md](../report_extraction/README.md). This LLM-based evaluation procedure was proposed in [AbdomenAtlas 2.0](https://github.com/mrgiovanni/radgpt).
 
 ```bash
-python calculate_sensitivity_specificity_F1_AUC.py --ground_truth_csv /path/to/metadata.csv --preds_dir /path/to/inference/output/
+python calculate_sensitivity_specificity_F1_AUC.py --ground_truth_csv /path/to/LLM_per_CT_metadata --preds_dir /path/to/inference/output/
 ```
 
 ---

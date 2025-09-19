@@ -48,7 +48,10 @@ def resume_load_model_checkpoint(net, ema_net, args):
     assert args.load != False, "Please specify the load path with --load"
     
     checkpoint = torch.load(args.load)
-    net.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    m = checkpoint['model_state_dict']
+    if isinstance(m, torch.nn.Module):
+        m = m.state_dict()
+    net.load_state_dict(m, strict=False)
     args.start_epoch = checkpoint['epoch']
 
     if args.ema:

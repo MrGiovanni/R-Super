@@ -69,8 +69,8 @@ def log_evaluation_result(writer, dice_list, ASD_list, HD_list, name, epoch, arg
         writer.add_scalar('HD/%s_HD%d'%(name, idx+1), HD_list[idx], epoch+1)
 
 def unwrap_model_checkpoint(net, ema_net, args):
-    net_state_dict = net.module if args.distributed else net 
-    net_state_dict = net_state_dict._orig_mod.state_dict() if args.torch_compile else net_state_dict.state_dict()
+    net_state_dict = net.module if args.distributed else net.state_dict()
+    #net_state_dict = net_state_dict._orig_mod.state_dict() if args.torch_compile else net_state_dict.state_dict()
     if args.ema:
         if args.distributed:
             ema_net_state_dict = ema_net.module.state_dict()

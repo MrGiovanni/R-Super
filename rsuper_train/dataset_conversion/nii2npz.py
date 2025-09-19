@@ -30,56 +30,60 @@ def pad(img, lab):
 
 
 def process_file(file_info):
-    global lab_name_list
-    name, source_path, target_path, modality = file_info
-    img = sitk.ReadImage(os.path.join(source_path, name))
-    img = sitk.GetArrayFromImage(img).astype(np.float32)
-
-    lab = []
-    create_bkg = False
-    for i,file in enumerate(list(sorted(lab_name_list)),0):
-        if file == 'background':
-            #check if file exists
-            if not os.path.exists(os.path.join(source_path, name.replace('.nii.gz', ''), file+'.nii.gz')):
-                create_bkg = True
-                bkg_index = i
-                continue
-        pth = os.path.join(source_path, name.replace('.nii.gz', ''), file+'.nii.gz')
-        item = sitk.ReadImage(pth)
-        item = sitk.GetArrayFromImage(item).astype(np.int8)
-        lab.append(item)
     try:
-        lab = np.stack(lab, axis=0)  # Makes label multi-channel
-    except:
-        print(f"Error processing {name}")
+        global lab_name_list
+        name, source_path, target_path, modality = file_info
+        img = sitk.ReadImage(os.path.join(source_path, name))
+        img = sitk.GetArrayFromImage(img).astype(np.float32)
+
+        lab = []
+        create_bkg = False
+        for i,file in enumerate(list(sorted(lab_name_list)),0):
+            if file == 'background':
+                #check if file exists
+                if not os.path.exists(os.path.join(source_path, name.replace('.nii.gz', ''), file+'.nii.gz')):
+                    create_bkg = True
+                    bkg_index = i
+                    continue
+            pth = os.path.join(source_path, name.replace('.nii.gz', ''), file+'.nii.gz')
+            item = sitk.ReadImage(pth)
+            item = sitk.GetArrayFromImage(item).astype(np.int8)
+            lab.append(item)
+        try:
+            lab = np.stack(lab, axis=0)  # Makes label multi-channel
+        except:
+            print(f"Error processing {name}")
+            return None
+        
+        if create_bkg:
+            background =  1 - np.sum(lab, axis=0)
+            lab = np.insert(lab, bkg_index, background, axis=0)
+                        
+        # Clip intensities
+        if modality == 'ct':
+            img = np.clip(img, -991, 500)
+        else:
+            percentile_2 = np.percentile(img, 2, axis=None)
+            percentile_98 = np.percentile(img, 98, axis=None)
+            img = np.clip(img, percentile_2, percentile_98)
+
+        # Normalize image
+        mean = np.mean(img)
+        std = np.std(img)
+        img -= mean
+        img /= std
+
+        # Pad image and label
+        img, lab = pad(img, lab)
+
+        # Save as .npy files
+        img, lab = img.astype(np.float32), lab.astype(np.int8)
+        np.savez_compressed(os.path.join(target_path, f"{name.replace('.nii.gz', '')}.npz"), img)
+        np.savez_compressed(os.path.join(target_path, f"{name.replace('.nii.gz', '')}_gt.npz"), lab)
+        return name  # Return processed file name for logging
+    except Exception as e:
+        print(f"[error] {name}: {e}")
         return None
-    
-    if create_bkg:
-        background =  1 - np.sum(lab, axis=0)
-        lab = np.insert(lab, bkg_index, background, axis=0)
-                     
-    # Clip intensities
-    if modality == 'ct':
-        img = np.clip(img, -991, 500)
-    else:
-        percentile_2 = np.percentile(img, 2, axis=None)
-        percentile_98 = np.percentile(img, 98, axis=None)
-        img = np.clip(img, percentile_2, percentile_98)
-
-    # Normalize image
-    mean = np.mean(img)
-    std = np.std(img)
-    img -= mean
-    img /= std
-
-    # Pad image and label
-    img, lab = pad(img, lab)
-
-    # Save as .npy files
-    img, lab = img.astype(np.float32), lab.astype(np.int8)
-    np.savez_compressed(os.path.join(target_path, f"{name.replace('.nii.gz', '')}.npz"), img)
-    np.savez_compressed(os.path.join(target_path, f"{name.replace('.nii.gz', '')}_gt.npz"), lab)
-    return name  # Return processed file name for logging
 
 # Main function
 def main():
@@ -111,7 +115,7 @@ def main():
     os.makedirs(os.path.join(target_path), exist_ok=True)
 
     for dataset, modality in dataset_list:
-        names = [name for name in os.listdir(os.path.join(source_path)) if '.nii.gz' in name]
+        names = sorted([name for name in os.listdir(os.path.join(source_path)) if '.nii.gz' in name])
         
         # Filter out files that have already been processed if overwrite is not enabled
         if not args.overwrite:

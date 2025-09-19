@@ -13,15 +13,55 @@ from concurrent.futures import ProcessPoolExecutor
 import argparse
 from functools import partial
 
+import uuid
+import tempfile
+import nibabel as nib
+import numpy as np
+
 sitk.ProcessObject_SetGlobalDefaultNumberOfThreads(16)  # Set the number of threads (adjust to your hardware)
+
+def _fix_nifti_affine(in_path: str, out_path: str):
+    """Rewrite a NIfTI with an orthonormalized affine so ITK/SimpleITK will accept it."""
+    img = nib.load(in_path)
+    data = img.get_fdata(dtype=np.float32)  # safe dtype
+    aff = img.affine
+
+    # Closest orthonormal rotation via SVD
+    U, _, Vt = np.linalg.svd(aff[:3, :3])
+    R = U @ Vt
+    fixed = aff.copy()
+    fixed[:3, :3] = R
+
+    nib.Nifti1Image(data, fixed, img.header).to_filename(out_path)
+
+def read_sitk_with_nib_fallback(path: str, tmp_dir='tmp'):
+    """Try sitk.ReadImage; if it fails due to non-orthonormal direction cosines,
+    rewrite the file via NiBabel and read the fixed version instead."""
+    try:
+        return sitk.ReadImage(path)
+    except RuntimeError as e:
+        msg = str(e).lower()
+        if "orthonormal direction cosines" in msg or "orthonormal" in msg:
+            # Make a unique temp file
+            os.makedirs(tmp_dir, exist_ok=True)
+            fixed_path = os.path.join(tmp_dir, f"fixed_{uuid.uuid4().hex}.nii.gz")
+            _fix_nifti_affine(path, fixed_path)
+            img = sitk.ReadImage(fixed_path)
+            # Clean up (best-effort)
+            try:
+                os.remove(fixed_path)
+            except Exception:
+                pass
+            return img
+        raise  # some other error: propagate
 
 
 def ResampleImage(imImage, imLabel, save_path, name, target_spacing=(1., 1., 1.)):
 
     imImage = reorient_image(imImage, 'RAI')
     for key in imLabel.keys():
-        assert imLabel[key].GetSize() == imImage.GetSize(), f'size mismatch for {key}'
         imLabel[key] = reorient_image(imLabel[key], 'RAI')
+        assert imLabel[key].GetSize() == imImage.GetSize(), f'size mismatch for {key}'
 
     spacing = imImage.GetSpacing()
 
@@ -78,7 +118,7 @@ def process_case_bdmap_format(name,overwrite=False):
 
         # Load the CT image
         img_name = os.path.join(src_path, name, 'ct.nii.gz')
-        itk_img = sitk.ReadImage(img_name)
+        itk_img = read_sitk_with_nib_fallback(img_name)
 
         # Prepare the label dictionary
         lab_dict = {}
@@ -94,7 +134,7 @@ def process_case_bdmap_format(name,overwrite=False):
                 l.SetOrigin(itk_img.GetOrigin())    # Match origin
                 l.SetDirection(itk_img.GetDirection())  # Match orientation
             else:
-                l = sitk.ReadImage(pth)
+                l = read_sitk_with_nib_fallback(pth)
             lab_dict[lab_name] = l
 
         # Resample the image and labels
@@ -129,7 +169,7 @@ def process_case_nnunet_format(name,overwrite=False):
             img_name = os.path.join(src_path, name, 'ct.nii.gz')
         if not os.path.exists(img_name):
             raise ValueError(f"File {img_name} does not exist")
-        itk_img = sitk.ReadImage(img_name)
+        itk_img = read_sitk_with_nib_fallback(img_name)
 
         # load the nnunet labels
         pth = os.path.join(label_path, name+'_0000.nii.gz')
@@ -140,7 +180,7 @@ def process_case_nnunet_format(name,overwrite=False):
         if not os.path.exists(pth):
             raise ValueError(f"File {pth} does not exist")
         
-        itk_lab = sitk.ReadImage(pth)
+        itk_lab = read_sitk_with_nib_fallback(pth)
         # Prepare the label dictionary
         lab_dict = {}
 
@@ -197,6 +237,8 @@ if __name__ == '__main__':
                         help="Path to a yaml file with the lesions to add to the classes list here.")
     parser.add_argument("--label_yaml", type=str, default=None,
                         help="Path to a yaml file with the label names.")
+    parser.add_argument("--ids", default=None,
+                        help="IDS in the dataset. path to a csv with a column BDMAP ID")    
     
 
     args = parser.parse_args()
@@ -206,6 +248,9 @@ if __name__ == '__main__':
     tgt_path = args.tgt_path
     #cases=pd.read_csv('/projects/bodymaps/Data/UCSF_metadata_filled.csv')['BDMAP ID'].to_list()
     name_list = [file for file in os.listdir(label_path)]
+    if args.ids is not None:
+        ids=pd.read_csv(args.ids)
+        name_list = [f for f in name_list if f.replace('.nii.gz','').replace('.npz','') in ids['BDMAP ID'].to_list()]
     nnunet_labels_used = args.nnunet_labels_used
     print('Number of cases:', len(name_list))
     # If splitting is requested, divide the name_list accordingly.

@@ -1,0 +1,1 @@
+bash parallel_inference.sh --pth /home/psalvad2/data/pants_WAW_symlinks/ --outdir /home/psalvad2/data/pants_WAW_symlinks/subsegments/ --checkpoint /home/psalvad2/R-Super_public/organ_masks/nnUNetTrainer__nnUNetPlannerResEncL_torchres_isotropic__3d_fullres/ --gpus 1,3,5
