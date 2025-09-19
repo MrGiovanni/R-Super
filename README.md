@@ -14,7 +14,7 @@
 
 
 <p align="center">
-  <img src="documents/r_super_pdac-8.gif" width="600"/>
+  <img src="documents/r_super_pdac-8.gif" width="300"/>
 </p> 
 
 
