@@ -10,7 +10,7 @@ This code uses our novel Volume Loss and Ball Loss to train a tumor segmentation
 <div style="margin-left: 25px;">
 
 The core of R-Super is its new report supervision loss functions: the Ball Loss and the Volume Loss. To use R-Super with your own architecture, you have 2 options:
-1) Just copy our loss functions to your own code. They are at: [rsuper_train/training/losses_foundation.py](rsuper_train/training/losses_foundation.py). The Volume Loss is the function volume_loss_basic, and the Ball Loss is the function ball_loss. To use the losses, first use LLMs to read reports and create organ masks (steps 1 and 2 below). You will also need to prepare your dataset to send these organ masks and report information to the losses (see [rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py](rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py)).
+1) Just copy our loss functions to your own code. They are at: [rsuper_train/training/losses_foundation.py](rsuper_train/training/losses_foundation.py). The Volume Loss is the function volume_loss_basic, and the Ball Loss is the function ball_loss. To use the losses, first use LLMs to read reports and create organ masks (see our main readme). You will also need to prepare your dataset to send these organ masks and report information to the losses (see [rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py](rsuper_train/training/dataset/dim3/dataset_abdomenatlas_UFO.py)).
 2) **Alternativelly, it may be easier to add your architecture to our code.** To do so, just substitute 'class MedFormer(nn.Module)' in [rsuper_train/model/dim3/medformer.py](rsuper_train/model/dim3/medformer.py) by your own architecture. Just format the output of your architecture like we do (check the function prepare_return). After substituting your architecture in our code, just run the steps below to train it with report supervision.
 </details>
 
@@ -94,7 +94,7 @@ pip install -r requirements.txt
 
 
 
-Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. *You must not have lesion masks in the dataset annotated with reports---if you use empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!*
+Name the tumors you want to predict in the format: {organ}_lesion.nii.gz, and the corresponding organs as {organ}.nii.gz. Exception: for pancreas, name it pancreatic_lesion.nii.gz, and name the organ masks as pancreas.nii.gz. Do not keep lesion masks in the dataset annotated with reports---if you keep empty lesion masks in the dataset annotated with reports, the code will understand that the dataset has no lesion!
 
 
 **2-Convert to npz.** Convert from nii.gz to npz. This is the standard format for MedFormer and nnU-Net preprocessed.
@@ -192,7 +192,7 @@ python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d 
 - lr: Initial learning rate, we decay it.
 - dist_url: used for DDP. You need to change the final 4 numbers if you get a port error.
 - report_volume_loss_basic: weight for our report-based losses (volume and ball losses). If 0, they are deactivated (training with masks only).
-
+- ucsf_ids: this is an optional argument. By default, the code will use all reports in --reports (and corresponding CT scans in --ufo_root) for training. If you pass ucsf_ids, the code will only train with the CT scans and reports indicated in ucsf_ids. You can use this to separate a training set: --ucsf_ids /path/to/training/set/ids.csv. The csv file must have a 'BDMAP ID' column with the ids of the training cases.
 
 </details>
 
@@ -218,6 +218,14 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 ```bash
 python predict_abdomenatlas.py --load exp/abdomenatlas_ufo/mask_and_report_model_name/fold_0_latest.pth --img_path /path/to/test/dataset/ --class_list dataset_conversion/label_names.yaml --save_path /path/to/inference/output/ --organ_mask_on_lesion --save_probabilities_lesions
 ```
+<details>
+<summary style="margin-left: 25px;"> Optional arguments </summary>
+<div style="margin-left: 25px;">
+
+- ids: this is an optional argument. By default, the code will predict on all cases in --img_path. If you pass ids, the code will only test with the CT scans indicated in ids. You can use this to separate a test set: --ids /path/to/test/set/ids.csv. The csv file must have a 'BDMAP ID' column with the ids of the test cases.
+
+</details>
+
 
 **3- Use test reports to calculate sensitivity, specificity, AUC and F1-Score.**
 The code below checks the saved predictions, and calculates tumor volume for difference confidence thresholds. It saves these volumes, per sample, to a multiple csv files (one for each confidence threshold). Files are saved at /path/to/inference/output/
