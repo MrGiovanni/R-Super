@@ -39,9 +39,9 @@ pip install -r requirements.txt
 ## Downloads
 
 Download data and pre-trained models:
-- **PanTS** CT scans and per-voxel masks: [PanTS 🤗](https://github.com/MrGiovanni/PanTS).
+- **PanTS** CT scans and per-voxel masks: [PanTS](https://github.com/MrGiovanni/PanTS).
 - **AI model pre-trained on PanTS** (trained w/ mask only): [AbdomenAtlas/RSuperMaskPretrained 🤗](https://huggingface.co/AbdomenAtlas/MedFormerPanTS). Move the downloaded model to 'R-Super/rsuper_train/exp/abdomenatlas/MedFormerPanTS/'.
-- **Merlin**, CT scans: [Merlin official website (Stanford)](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)
+- **Merlin**, CT scans: [Merlin official website (Stanford)](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40).
 - **Merlin Plus** organ segmentation masks: We have created segmentation masks for 44 organs in the whole Merlin dataset. In collaboration with the authors of Merlin (Stanford). Download them here: [Merlin Plus 🤗](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/).
 
 <details>
