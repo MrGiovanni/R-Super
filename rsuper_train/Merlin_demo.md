@@ -39,15 +39,15 @@ pip install -r requirements.txt
 ## Downloads
 
 Download data and pre-trained models:
-- PanTS CT scans and per-voxel masks: You can download the PanTS dataset already preprocessed here **TODO** 
-- AI model pre-trained on PanTS (trained w/ mask only): [AbdomenAtlas/RSuperMaskPretrained 🤗](https://huggingface.co/AbdomenAtlas/MedFormerPanTS). Move the downloaded model to 'R-Super/rsuper_train/exp/abdomenatlas/MedFormerPanTS/'.
-- Merlin, CT scans: [Merlin official website (Stanford)](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)
-- Merlin, organ segmentation masks: We have created segmentation masks for 43 organs in the whole Merlin dataset. In collaboration with the authors of Merlin (Stanford), **we will release these masks very soon!** Currently, you can create Merlin organ segmentation masks following [this readme](../organ_masks/README.md). You only need to create masks for the Merlin CT scans in [mapping_Merlin_BDMAP_pancreas_subset.csv](mapping_Merlin_BDMAP_pancreas_subset.csv).
+- **PanTS** CT scans and per-voxel masks: [PanTS 🤗](https://github.com/MrGiovanni/PanTS).
+- **AI model pre-trained on PanTS** (trained w/ mask only): [AbdomenAtlas/RSuperMaskPretrained 🤗](https://huggingface.co/AbdomenAtlas/MedFormerPanTS). Move the downloaded model to 'R-Super/rsuper_train/exp/abdomenatlas/MedFormerPanTS/'.
+- **Merlin**, CT scans: [Merlin official website (Stanford)](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)
+- **Merlin Plus** organ segmentation masks: We have created segmentation masks for 44 organs in the whole Merlin dataset. In collaboration with the authors of Merlin (Stanford). Download them here: [Merlin Plus 🤗](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/).
 
 <details>
 <summary style="margin-left: 25px;">Merlin Download Details</summary>
 <div style="margin-left: 25px;">
-We cannot redistribute Merlin, but it is easy to download. Click on the 'Merlin official website' link above, create an account and request access to Merlin.
+We cannot redistribute Merlin CTs, but it is easy to download. Click on the 'Merlin official website' link above, create an account and request access to Merlin.
 You will get access immediately. Then, click on the link above again. In the page that will open, click "Download  (2970.90 GB)" in the top left corner. This will not download the dataset, but you will get another link, something like https://aimistanforddatasets01****&sp=rl. Copy and paste it in the command below. Run the command to download Merlin.
 
 ```bash
@@ -69,9 +69,11 @@ python dataset_conversion/rename_pants.py /path/to/data/you/downloaded/PanTS/Ima
 
 python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_data/ --mapping dataset_conversion/mapping_merlin.csv
 
+python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
+
 python dataset_conversion/abdomenatlas_3d.py \
     --src_path /path/to/data/you/downloaded/merlin_data/ \
-    --label_path /path/to/merlin_per_voxel_masks/ \
+    --label_path /path/to/data/you/downloaded/merlin_per_voxel_masks/ \
     --tgt_path /path/to/merlin_medformer_pancreas_normals/ --workers 16 \
     --ids Merlin_pancreas_all_cases.csv \
     --label_yaml dataset_conversion/label_names_report_dataset_pancreas.yaml
@@ -93,11 +95,11 @@ The command above converts all pancreatic lesion cases in Merlin (~2K) plus ~2K 
 Merlin:
 ```bash
 
-python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
+python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
 
 python dataset_conversion/abdomenatlas_3d.py \
     --src_path /path/to/data/you/downloaded/merlin_data/ \
-    --label_path /path/to/merlin_per_voxel_masks/ \
+    --label_path /path/to/data/you/downloaded/merlin_per_voxel_masks/ \
     --tgt_path /path/to/merlin_medformer_pancreas_normals/ --workers 16 \
     --ids Merlin_pancreas_all_cases.csv \
     --label_yaml dataset_conversion/label_names_report_dataset_pancreas.yaml

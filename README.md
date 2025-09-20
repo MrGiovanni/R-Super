@@ -28,6 +28,10 @@ We present R-Super, a training strategy that transforms radiology reports (text)
   <img src="documents/rsuper_abstract.png" width="600"/>
 </p> 
 
+> [!NOTE]
+> **We released Merlin Plus!**  
+> The Merlin Plus dataset has 44 segmentation masks for each of the 25K CT scans in Merlin. The masks include organs, blood vessels, ducts, and organ sub-segments. Merlin Plus is a large public dataset with CT, reports, and masks. You can use it in the demo below to train R-Super and improve tumor segmentation.
+>[Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/) 
 
 ## Paper
 
@@ -49,9 +53,11 @@ This demo trains and evaluates R-Super (Report Supervision) with only **public d
 
 Datasets (check the demo for download instructions):
 - **[PanTS](https://github.com/MrGiovanni/PanTS)**: 10K CT, 1.1K pancreatic lesion segmentation masks
-- **[Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)**: 2048 pancreatic lesion reports, no mask
+- **[Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)**: 25K CTs & reports, 2K pancreatic lesion CTs, no mask
+- **[Merlin Plus](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)**: 25K organ segmentation masks for Merlin, 44 classes
 
-> **Very soon: Organ segmentation masks for Merlin!** We have created segmentation masks for 43 organs in the whole Merlin dataset. In collaboration with the authors of Merlin (Stanford), we will release these masks very soon!
+
+> **Easy to Reproduce** R-Super usually needs 3 steps: LLM extracts tumor information from reports, creation of organ segmentation masks, and training R-Super. Our demo skips steps 1 and 2. You can download the LLM output, organ segmentation masks (Merlin Plus), and just train R-Super. You can also download the trained R-Super checkpoint and test.
 
 ## Public Trained Checkpoints
 

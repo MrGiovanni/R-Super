@@ -8,7 +8,7 @@ We use an [nnU-Net](https://github.com/MIC-DKFZ/nnUNet), trained for organ segme
 
 **Repeat twice:** We consider that you have a dataset of CT-Mask pairs (e.g., [MSD](http://medicaldecathlon.com), [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/)) and a dataset of CT-Report pairs (e.g., [AbdomenAtlas 3.0](https://github.com/MrGiovanni/RadGPT/), [CT-Rate](https://huggingface.co/datasets/ibrahimhamamci/CT-RATE), [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)). In this case, you will need organ segmentation masks for both (at least for the organs with tumors). You may use your own masks, or generate them with the code below. To you generate them for both datasets, just run the code below twice, once for each dataset (use different paths for each dataset).
 
-> **Merlin Organ Masks:** We will release the organ segmentation masks for Merlin very soon!
+> **Merlin Masks:** To train R-Super with the Merlin dataset, you can skip this step! We have released the **Merlin Plus** dataset, consisting of 44 organ segmentation masks for each of the 25K CT scans in Merlin. With Merlin Plus, you have a large public dataset with CT, reports and masks. [Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)
 
 > **PanTS Masks:** You do not need to run the organ segmentaiton AI for PanTS. You can download its organ and tumor segmentation masks [here](https://github.com/MrGiovanni/PanTS).
 
