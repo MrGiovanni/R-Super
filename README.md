@@ -45,6 +45,10 @@ MICCAI 2025 <br/>
 ${\color{red} {\textbf{Best Paper Award Runner-up}}}$ <br/>
 <a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a> <a href='https://www.cs.jhu.edu/~zongwei/poster/bassi2025miccai_rsuper.pdf'><img src='https://img.shields.io/badge/Poster-PDF-blue'></a>
 
+<p align="center">
+  <img src="documents/miccai_2025_best_paper_award.png" width="400"/>
+</p> 
+
 
 ## R-Super Demo with Public Data
 
