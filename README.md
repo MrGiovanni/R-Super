@@ -33,7 +33,7 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 > The Merlin Plus dataset has 44 segmentation masks for each of the 25K CT scans in Merlin. The masks include organs, blood vessels, ducts, and organ sub-segments. Merlin Plus is a large public dataset with CT, reports, and organ masks. You can use it in the demo below to train R-Super and improve tumor segmentation.
 >[Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)
 >
-> **Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
+> **Extension: Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
 > We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our preprint for this new work is available [here](https://www.cs.jhu.edu/~zongwei/publication/bassi2025medical.pdf).
 
 ## Paper
