@@ -53,7 +53,7 @@ You will get access immediately. Then, click on the link above again. In the pag
 ```bash
 env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
     HTTPS_PROXY=dummy.invalid NO_PROXY="*" \
-    azcopy copy "paste_your_link_here"      "/path/to/Merlin/download/destination/" --rec--recursive
+    azcopy copy "paste_your_link_here" "/path/to/Merlin/download/destination/" --rec --recursive
 ```
 
 </div>
