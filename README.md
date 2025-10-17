@@ -34,7 +34,7 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 >[Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)
 >
 > **Extension: Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
-> We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our preprint for this new work is available [here](https://www.cs.jhu.edu/~zongwei/publication/bassi2025scaling.pdf).
+> We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our preprint for this new work is available [here](https://arxiv.org/abs/2510.14803).
 
 ## Paper
 
