@@ -147,16 +147,14 @@ PS: Merlin was not public at the time we wrote the MICCAI paper.
 If you use the code, data or methods in this repository, please cite:
 
 ```
- @InProceedings{ BasPed_Learning_MICCAI2025,
-                 author = { Bassi, Pedro R. A. S. AND Li, Wenxuan AND Chen, Jieneng AND Zhu, Zheren AND Lin, Tianyu AND Decherchi, Sergio AND Cavalli, Andrea AND Wang, Kang AND Yang, Yang AND Yuille, Alan L. AND Zhou, Zongwei },
-                 title = { { Learning Segmentation from Radiology Reports } }, 
-                 booktitle = {Medical Image Computing and Computer Assisted Intervention -- MICCAI 2025},
-                 year = {2025},
-                 publisher = {Springer Nature Switzerland},
-                 volume = { LNCS 15964 },
-                 month = {October},
-                 pages = { 305 -- 315 },
-              }
+@inproceedings{bassi2025learning,
+  title={Learning Segmentation from Radiology Reports},
+  author={Bassi, Pedro RAS and Li, Wenxuan and Chen, Jieneng and Zhu, Zheren and Lin, Tianyu and Decherchi, Sergio and Cavalli, Andrea and Wang, Kang and Yang, Yang and Yuille, Alan L and others},
+  booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
+  pages={305--315},
+  year={2025},
+  organization={Springer}
+}
 
 @article{bassi2025radgpt,
   title={Radgpt: Constructing 3d image-text tumor datasets},
