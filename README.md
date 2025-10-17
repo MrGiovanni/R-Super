@@ -156,6 +156,16 @@ If you use the code, data or methods in this repository, please cite:
   organization={Springer}
 }
 
+@misc{bassi2025scaling,
+      title={Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks}, 
+      author={Pedro R. A. S. Bassi and Xinze Zhou and Wenxuan Li and Szymon Płotka and Jieneng Chen and Qi Chen and Zheren Zhu and Jakub Prządo and Ibrahim E. Hamacı and Sezgin Er and Yuhan Wang and Ashwin Kumar and Bjoern Menze and Jarosław B. Ćwikła and Yuyin Zhou and Akshay S. Chaudhari and Curtis P. Langlotz and Sergio Decherchi and Andrea Cavalli and Kang Wang and Yang Yang and Alan L. Yuille and Zongwei Zhou},
+      year={2025},
+      eprint={2510.14803},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2510.14803}, 
+}
+
 @article{bassi2025radgpt,
   title={Radgpt: Constructing 3d image-text tumor datasets},
   author={Bassi, Pedro RAS and Yavuz, Mehmet Can and Wang, Kang and Chen, Xiaoxi and Li, Wenxuan and Decherchi, Sergio and Cavalli, Andrea and Yang, Yang and Yuille, Alan and Zhou, Zongwei},
