@@ -16,7 +16,7 @@ The core of R-Super is its new report supervision loss functions: the Ball Loss 
 
 > **Public Demo (w/ Merlin and AbdomenAtlas 2.0).** This readme has details that can help you deeply understand R-Super and use it in your own data. Please [**click here for a simple demo**](Merlin_demo.md), which shows you how to quickly train and test R-Super using public datasets (Merlin and AbdomenAtlas 2.0)!
 
-> **Teting only:** If you only want to test a trained R-Super model, skip directly to testing.
+> **Teting only:** If you only want to test a trained R-Super model, skip directly to the testing section in the end of this page.
 
 
 #### Volume Loss
