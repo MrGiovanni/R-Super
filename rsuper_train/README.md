@@ -16,6 +16,9 @@ The core of R-Super is its new report supervision loss functions: the Ball Loss 
 
 > **Public Demo (w/ Merlin and AbdomenAtlas 2.0).** This readme has details that can help you deeply understand R-Super and use it in your own data. Please [**click here for a simple demo**](Merlin_demo.md), which shows you how to quickly train and test R-Super using public datasets (Merlin and AbdomenAtlas 2.0)!
 
+> **Teting only:** If you only want to test a trained R-Super model, skip directly to testing.
+
+
 #### Volume Loss
 <div align="center">
   <img src="../documents/volume_loss.png" alt="logo" width="600" />
@@ -51,6 +54,7 @@ pip install -r requirements.txt
 
 
 ## Data preparation
+
 
 
 **1-Dataset format.** Assemble your datasets in the format below. We consider that you have a dataset of CT-Mask pairs (e.g., [MSD](http://medicaldecathlon.com), [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/)) and a dataset of CT-Report pairs (e.g., [AbdomenAtlas 2.0](https://github.com/MrGiovanni/RadGPT/), [CT-Rate](https://huggingface.co/datasets/ibrahimhamamci/CT-RATE), [Merlin](https://stanfordaimi.azurewebsites.net/datasets/60b9c7ff-877b-48ce-96c3-0194c8205c40)). In this case, you will need organ segmentation masks for both (see [organ_masks](../organ_masks/README.md) to create them). Organize both in the format below, in different paths (e.g., dataset_masks and dataset_reports). *Repeat steps 2, 3 and 4 (below) for each of the datasets.* We will call the outputs dataset_masks_npz and dataset_reports_npz.
@@ -211,7 +215,43 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 
 ## Test
 
-**1- Pre-processing.** Pre-process your test dataset as shown in the "Data preparation" section in the beginning of this readme.
+**1- Pre-processing.** Prepare your dataset in the format below (same format as in dataset preparation). The testing code accepts both nii.gz and .npz files. Npz is faster.
+<details>
+<summary style="margin-left: 25px;">Dataset format.</summary>
+<div style="margin-left: 25px;">
+
+```
+/path/to/dataset/
+├── BDMAP_0000001
+|    ├── ct.nii.gz
+│    └── segmentations
+│          ├── liver_lesion.nii.gz
+│          ├── kidney_lesion.nii.gz
+│          ├── pancreatic_lesion.nii.gz
+│          ├── aorta.nii.gz
+│          ├── gall_bladder.nii.gz
+│          ├── kidney_left.nii.gz
+│          ├── kidney_right.nii.gz
+│          ├── liver.nii.gz
+│          ├── pancreas.nii.gz
+│          └──...
+├── BDMAP_0000002
+|    ├── ct.nii.gz
+│    └── segmentations
+│          ├── liver_lesion.nii.gz
+│          ├── kidney_lesion.nii.gz
+│          ├── pancreatic_lesion.nii.gz
+│          ├── aorta.nii.gz
+│          ├── gall_bladder.nii.gz
+│          ├── kidney_left.nii.gz
+│          ├── kidney_right.nii.gz
+│          ├── liver.nii.gz
+│          ├── pancreas.nii.gz
+│          └──...
+...
+```
+</div>
+</details>
 
 **2- Inference.** The code below will inference your R-Super model, generating binary segmentation masks. To save probabilities, add the argument --save_probabilities or --save_probabilities_lesions (which saves only probabilities for lesions, not for organs). The optional argument --organ_mask_on_lesion will use organ segmentations (produced by the R-Super model itself, not ground-truth) to remove tumor predictions outside its organ.
 
