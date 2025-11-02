@@ -50,6 +50,7 @@ MICCAI 2025 <br/>
 ${\color{red} {\textbf{Best Paper Award (Runner-up, top 2 in 1,027 papers)}}}$ <br/>
 <a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a> <a href='https://www.cs.jhu.edu/~zongwei/poster/bassi2025miccai_rsuper.pdf'><img src='https://img.shields.io/badge/Poster-PDF-blue'></a>
 <a href='https://link.springer.com/chapter/10.1007/978-3-032-04971-1_29'><img src='https://img.shields.io/badge/Springer-Link-orange'></a>
+<a href='https://www.cs.jhu.edu/news/for-ai-tumor-detection-a-picture-isnt-always-worth-a-thousand-words/'><img src='https://img.shields.io/badge/JHU-News-green'></a>
 
 <p align="center">
   <img src="documents/miccai_2025_best_paper_award.png" width="400"/>
