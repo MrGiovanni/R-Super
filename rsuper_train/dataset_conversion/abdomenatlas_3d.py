@@ -146,7 +146,7 @@ def process_case_bdmap_format(name,overwrite=False):
 
 
 def process_case_nnunet_format(name,overwrite=False):
-    lab_name_list=sorted(list(labels_nnunet.keys()))
+    lab_name_list=sorted(labels_nnunet.keys())
     name = name.replace("_0000.nii.gz","").replace(".nii.gz","")
     
     try:
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     joint_labels_nnunet = {'liver': [f'liver_segment_{i}' for i in range(1, 9)]+['hepatic_vessel'],
                            'pancreas': ['pancreas_head', 'pancreas_body', 'pancreas_tail']}
     
-    names_labels_nnunet = set(list(nnunet_labels_saved.keys())+list(joint_labels_nnunet.keys()))-{'background','hepatic_vessel'}
+    names_labels_nnunet = set(nnunet_labels_saved.keys()) | set(joint_labels_nnunet.keys()) - {'background','hepatic_vessel'}
 
     tmp = {}
     for key in names_labels_nnunet:
@@ -353,7 +353,7 @@ if __name__ == '__main__':
         yaml.dump(name_list, f)
     
     if nnunet_labels_used:
-        lab_name_list = sorted(list(labels_nnunet.keys()))
+        lab_name_list = sorted(labels_nnunet.keys())
     with open(tgt_path+"/list/label_names.yaml", "w",encoding="utf-8") as f:
         yaml.dump(lab_name_list, f)
 
