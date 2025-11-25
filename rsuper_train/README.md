@@ -239,6 +239,7 @@ python predict_abdomenatlas.py --load exp/abdomenatlas_ufo/mask_and_report_model
 <details>
 <summary style="margin-left: 25px;"> Argument Details </summary>
 <div style="margin-left: 25px;">
+  
 - load: path to the model checkpoint (fold_0_latest.pth)
 - img_path: path to dataset
 - class_list: a yaml file with the class names of your model
