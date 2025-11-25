@@ -215,7 +215,7 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 
 ## Test
 
-**1- Pre-processing.** Prepare your dataset in the format below (same format as in dataset preparation). The testing code accepts both nii.gz and .npz files. Npz is faster.
+**1- Pre-processing.** Prepare your dataset in the format below (same format as in dataset preparation, but you do not need the masks for testing). The testing code accepts both nii.gz and .npz files. Npz is faster.
 <details>
 <summary style="margin-left: 25px;">Dataset format.</summary>
 <div style="margin-left: 25px;">
@@ -223,45 +223,26 @@ To continue training from an interrupted run, add:  --resume --load exp/abdomena
 ```
 /path/to/dataset/
 ├── BDMAP_0000001
-|    ├── ct.nii.gz
-│    └── segmentations
-│          ├── liver_lesion.nii.gz
-│          ├── kidney_lesion.nii.gz
-│          ├── pancreatic_lesion.nii.gz
-│          ├── aorta.nii.gz
-│          ├── gall_bladder.nii.gz
-│          ├── kidney_left.nii.gz
-│          ├── kidney_right.nii.gz
-│          ├── liver.nii.gz
-│          ├── pancreas.nii.gz
-│          └──...
+|    └── ct.nii.gz
 ├── BDMAP_0000002
-|    ├── ct.nii.gz
-│    └── segmentations
-│          ├── liver_lesion.nii.gz
-│          ├── kidney_lesion.nii.gz
-│          ├── pancreatic_lesion.nii.gz
-│          ├── aorta.nii.gz
-│          ├── gall_bladder.nii.gz
-│          ├── kidney_left.nii.gz
-│          ├── kidney_right.nii.gz
-│          ├── liver.nii.gz
-│          ├── pancreas.nii.gz
-│          └──...
+|    └── ct.nii.gz
 ...
 ```
 </div>
 </details>
 
-**2- Inference.** The code below will inference your R-Super model, generating binary segmentation masks. To save probabilities, add the argument --save_probabilities or --save_probabilities_lesions (which saves only probabilities for lesions, not for organs). The optional argument --organ_mask_on_lesion will use organ segmentations (produced by the R-Super model itself, not ground-truth) to remove tumor predictions outside its organ.
+**2- Inference.** The code below will inference your R-Super model, generating binary segmentation masks. To save probabilities, add the argument --save_probabilities or --save_probabilities_lesions (which saves only probabilities for lesions, not for organs). The optional argument --organ_mask_on_lesion will use organ segmentations (produced by the R-Super model itself, not ground-truth) to remove tumor predictions outside its organ. 
 
 ```bash
 python predict_abdomenatlas.py --load exp/abdomenatlas_ufo/mask_and_report_model_name/fold_0_latest.pth --img_path /path/to/test/dataset/ --class_list dataset_conversion/label_names.yaml --save_path /path/to/inference/output/ --organ_mask_on_lesion --save_probabilities_lesions
 ```
 <details>
-<summary style="margin-left: 25px;"> Optional arguments </summary>
+<summary style="margin-left: 25px;"> Argument Details </summary>
 <div style="margin-left: 25px;">
-
+- load: path to the model checkpoint (fold_0_latest.pth)
+- img_path: path to dataset
+- class_list: a yaml file with the class names of your model
+- save_path: path to output, where masks will be saved
 - ids: this is an optional argument. By default, the code will predict on all cases in --img_path. If you pass ids, the code will only test with the CT scans indicated in ids. You can use this to separate a test set: --ids /path/to/test/set/ids.csv. The csv file must have a 'BDMAP ID' column with the ids of the test cases.
 
 </details>
