@@ -36,7 +36,7 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 > **Extension: Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
 > We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our preprint for this new work is available [here](https://arxiv.org/abs/2510.14803).
 
-## Paper
+## Papers
 
 <b>Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks</b> <br/>
 [Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Zheren Zhu, Tianyu Lin, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
