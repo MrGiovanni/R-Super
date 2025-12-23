@@ -10,8 +10,6 @@ import math
 import random
 import pdb
 from training import augmentation
-import os
-import yaml
 import time
 import sys
 import pandas as pd
