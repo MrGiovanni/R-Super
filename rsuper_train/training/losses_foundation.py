@@ -1562,8 +1562,18 @@ def ball_loss(out, labels, unk_voxels, chosen_segment_mask, tumor_volumes, tumor
               sigmoid=True, standard_ce=False, class_weights=None,
               single_class=False, use_small_pseudo_mask=True):
     """
+    Implementation of the Ball Loss. It uses ball convolutions to localize the tumor, then turns that localization into a voxel-wise training signal. 
+    
+    Important: this funciton only supervises the segmentation channels for one tumor type per sample (corresponding to the organ we cropped on, encoded in chosen_segment_mask).
+    All other tumor channels must still be trained to predict no tumor in case the report mentions they have no tumor, or they must not be penalized in case organs have tumors but are only partially in the crop.
+    We handle this with a standard loss (cross-entropy with target 0) on the no-tumor channels. 
+    In our calculate_loss function, this is implemented by matching the model outputs to the labels everywhere except at unk_voxels, which are excluded from supervision (loss_seg = loss_seg * known_voxels).
+    
     This funciton first uses a ball loss to isolate the tumor. Then, it selects the top N voxels inside the ball as a "pseudo-label" and applies BCE loss per-voxel.
-    Optionally, we can average the per-voxel BCE loss using GWRP weights calculated for the isolated tumor voxels. This will give more emphasis in increasing high confidence voxels.
+    Important note: this loss is desgined to optimize the segmentation channels where the report mention tumors. The channels without tumor must also be penalize. 
+    This can be done with a standard cross-entropy loss with target 0 over these channels. For example, if a report mentions spleen tumors, this loss will penalize the
+    spleen tumor channel, another loss (cross-entropy) should penalize the channel for esophagus tumors, bladder tumors,... We do this in our calculate_loss function,
+    where the model output output is penalized to match labels, except for the unk_voxels. 
     Args:
     x is the model output
     tumor_diameter is a tensor of size B,T,3, batch, number of tumors in the crop, and 3 diameters
