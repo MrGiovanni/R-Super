@@ -211,15 +211,15 @@ class SemanticMapFusion(nn.Module):
 
         # project all maps to the same channel num
         self.in_proj = nn.ModuleList([])
-        for i in range(len(in_dim_list)):
-            self.in_proj.append(nn.Linear(in_dim_list[i], dim, bias=False))
+        for in_dim in in_dim_list:
+            self.in_proj.append(nn.Linear(in_dim, dim, bias=False))
 
         self.fusion = TransformerBlock(dim, depth, heads, dim//heads, dim, attn_drop=attn_drop, proj_drop=proj_drop)
 
         # project all maps back to their origin channel num
         self.out_proj = nn.ModuleList([])
-        for i in range(len(in_dim_list)):
-            self.out_proj.append(nn.Linear(dim, in_dim_list[i], bias=False))
+        for in_dim in in_dim_list:
+            self.out_proj.append(nn.Linear(dim, in_dim, bias=False))
 
     def forward(self, map_list):
         B, N, dim = map_list[0].shape

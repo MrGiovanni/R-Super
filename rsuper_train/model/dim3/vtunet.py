@@ -151,6 +151,7 @@ class VTUNet(nn.Module):
 
                     full_dict.update({current_k: v})
 
+            # list() is necessary here since we're deleting keys during iteration
             for k in list(full_dict.keys()):
 
                 if k in model_dict:
