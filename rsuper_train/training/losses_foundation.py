@@ -673,26 +673,7 @@ def model_genesis_loss(result,label):
           'overall': l}
     return loss
     
-def all_gather_tensor(x, dist):
-    """
-    Gathers `x` across all DDP ranks *with* autograd support.
-    If we're not in a distributed context or only one GPU, just returns x.
-    """
-    if not dist.is_available() or not dist.is_initialized() or dist.get_world_size() == 1:
-        # Single‐GPU / non‐DDP path: no gather needed
-        return x
 
-    world = dist.get_world_size()
-    # Prepare list of tensors to gather into
-    with torch.no_grad():
-        gathered = [torch.zeros_like(x) for _ in range(world)]
-        # This call *does* record the collective in autograd, so gradients will flow
-        dist.all_gather(gathered, x)
-    #print(f'Sum of gathered tensors: {sum([g.sum() for g in gathered])}')
-    rank = dist.get_rank()
-    gathered[rank] = x #the grad flows through here
-    # Concatenate along the batch dimension
-    return torch.cat(gathered, dim=0)
 
 def merge_no_overlap(d1, d2):
     overlap = d1.keys() & d2.keys()
@@ -865,8 +846,6 @@ def calculate_loss(model_output, label, unk_voxels, args, matcher,chosen_segment
             for i in range(len(seg_result)):
                 tmp = tmp + seg_result[i].sum()*0
         result_embedding = result_embedding+tmp*0#this is to avoid unused parameter error
-        result_embedding = all_gather_tensor(result_embedding, dist)
-        report_embeddings = all_gather_tensor(report_embeddings, dist)
         #assert same shape (all dimensions)
         assert result_embedding.shape == report_embeddings.shape, f'Result embedding shape is: {result_embedding.shape}, report embedding shape is: {report_embeddings.shape}'
         loss_ct2rep = nce.info_nce(result_embedding, report_embeddings)
