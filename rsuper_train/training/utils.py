@@ -105,7 +105,7 @@ def multistep_lr_scheduler_with_warmup(optimizer, init_lr, epoch, warmup_epoch, 
             flag = True
             break
 
-    if flag == True:
+    if flag:
         lr = init_lr * gamma**(i+1)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr

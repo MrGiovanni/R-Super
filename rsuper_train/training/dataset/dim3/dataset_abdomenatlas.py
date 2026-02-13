@@ -79,7 +79,7 @@ def get_class_proportions(meta,sample_list,lesion_class_names):
     organs_lesion_classes = {n.replace('_lesion','').replace('_','').replace('adrenal','adrenal gland'): n for n in lesion_class_names} # remove lesion suffix to get organs
 
     # Get the counts for each class
-    cols = [f'number of {organ} lesion instances' for organ in list(organs_lesion_classes.keys())] # get the columns for each organ lesion instance
+    cols = [f'number of {organ} lesion instances' for organ in organs_lesion_classes] # get the columns for each organ lesion instance
     
     #print cols missing from meta
     for col in cols:
