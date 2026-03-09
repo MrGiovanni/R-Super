@@ -29,39 +29,44 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 </p> 
 
 > [!NOTE]
-> **We released Merlin Plus!**  
-> The Merlin Plus dataset has 44 segmentation masks for each of the 25K CT scans in Merlin. The masks include organs, blood vessels, ducts, and organ sub-segments. Merlin Plus is a large public dataset with CT, reports, and organ masks. You can use it in the demo below to train R-Super and improve tumor segmentation.
->[Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)
->
 > **Extension: Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
-> We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our preprint for this new work is available [here](https://arxiv.org/abs/2510.14803).
+> We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our _preprint_ is available [here](https://arxiv.org/abs/2510.14803).
 
 ## Papers
-
-<b>Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks</b> <br/>
-[Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Zheren Zhu, Tianyu Lin, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
-*Johns Hopkins University* <br/>
-<a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025scaling.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
 
 <b>Learning Segmentation from Radiology Reports</b> <br/>
 [Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Zheren Zhu, Tianyu Lin, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
 *Johns Hopkins University* <br/>
-MICCAI 2025, Best Paper Award (runner-up) <br/>
+MICCAI 2025, [**Best Paper Award**](https://miccai.org/index.php/about-miccai/awards/best-paper-award-and-young-scientist-award/) (runner-up) <br/>
 <a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a> <a href='https://www.cs.jhu.edu/~zongwei/poster/bassi2025miccai_rsuper.pdf'><img src='https://img.shields.io/badge/Poster-PDF-blue'></a>
 <a href='https://www.cs.jhu.edu/news/for-ai-tumor-detection-a-picture-isnt-always-worth-a-thousand-words/'><img src='https://img.shields.io/badge/JHU-News-green'></a>
 [![YouTube](https://badges.aleen42.com/src/youtube.svg)](https://youtu.be/7pamG9DDSJw?si=-376z03g832UyTKB)
 <a href='https://youtu.be/r11X39fH-yU?si=ZOBlHMo1CvN9aVzb'><img src='https://img.shields.io/badge/Oral-RSNA-orange'></a>
-## Awards
 
-- RSNA 2025 Certificate of Merit Award
-- ${\color{red} {\textbf{MICCAI 2025 Best Paper Award (Runner-up, top 2 in 1,027 papers)}}}$ <br/>
+<b>Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks</b> <br/>
+[Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Zheren Zhu, Tianyu Lin, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
+*Johns Hopkins University* <br/> 
+Preprint <br/>
+<a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025scaling.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
+## Awards
 
 <p align="center">
   <img src="documents/miccai_2025_best_paper_award.png" width="400"/>
 </p> 
 
+- RSNA 2025 Certificate of Merit Award
+- ${\color{red} {\textbf{MICCAI 2025 Best Paper Award (Runner-up, top 2 in 1,027 papers)}}}$ <br/>
+
+
 
 ## R-Super Demo with Public Data
+
+
+> [!NOTE]
+> **We released Merlin Plus!**  
+> The Merlin Plus dataset has 44 segmentation masks for each of the 25K CT scans in Merlin. The masks include organs, blood vessels, ducts, and organ sub-segments. Merlin Plus is a large public dataset with CT, reports, and organ masks. You can use it in the demo below to train R-Super and improve tumor segmentation.
+>[Download it here!](https://huggingface.co/datasets/AbdomenAtlas/MerlinPlus/)
+>
 
 
 ![Pancreatic metrics](documents/demo_results.png)
