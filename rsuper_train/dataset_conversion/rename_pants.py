@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Rename immediate subfolders of a directory by replacing the *suffix* 'PanTS'
+Rename immediate subfolders of a directory by replacing the *prefix* 'PanTS'
 with 'BDMAP'. Non-recursive. Skips if the target name already exists.
 
 Usage:
@@ -12,13 +12,13 @@ from pathlib import Path
 import argparse
 import sys
 
-SRC_SUFFIX = "PanTS"
-DST_SUFFIX = "BDMAP"
+SRC_PREFIX = "PanTS"
+DST_PREFIX = "BDMAP"
 
 def rename_subfolders(root_dir: Path, dry_run: bool = False) -> dict:
     """
-    Rename immediate subfolders of `root_dir` whose names end with SRC_SUFFIX
-    to end with DST_SUFFIX instead.
+    Rename immediate subfolders of `root_dir` whose names end with SRC_PREFIX
+    to end with DST_PREFIX instead.
 
     Returns a dict with counts: {'renamed': int, 'skipped_no_match': int, 'skipped_exists': int, 'errors': int}
     """
@@ -29,11 +29,11 @@ def rename_subfolders(root_dir: Path, dry_run: bool = False) -> dict:
             continue
 
         name = p.name
-        if not name.endswith(SRC_SUFFIX):
+        if not name.startswith(SRC_PREFIX):
             stats["skipped_no_match"] += 1
             continue
 
-        new_name = name[: -len(SRC_SUFFIX)] + DST_SUFFIX
+        new_name = DST_PREFIX + name[len(SRC_PREFIX):]
         target = p.with_name(new_name)
 
         if target.exists():
