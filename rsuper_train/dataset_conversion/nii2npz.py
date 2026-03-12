@@ -96,6 +96,8 @@ def main():
                         help="Number of parts to split the dataset into (default 1, meaning no split).")
     parser.add_argument("--current_part", type=int, default=0,
                         help="The index (0-based) of the current part to process.")
+    parser.add_argument("--workers", type=int, default=8,
+                        help="Number of parallel workers to use for processing.")
     parser.add_argument("--overwrite", action="store_true",
                         help="Overwrite already processed cases.")
     args = parser.parse_args()
@@ -104,6 +106,7 @@ def main():
     target_path = args.tgt_path
     parts = args.parts
     current_part = args.current_part
+    workers = args.workers
     dataset_list = [
         ('abdomenatlas', 'ct'),
     ]
@@ -151,7 +154,7 @@ def main():
         file_info_list = [(name, source_path, target_path, modality) for name in names]
 
         # Process in parallel using ProcessPoolExecutor
-        with ProcessPoolExecutor(max_workers=8) as executor:  # Adjust `max_workers` as per hardware
+        with ProcessPoolExecutor(max_workers=workers) as executor:  # Adjust `max_workers` as per hardware
             for result in tqdm(executor.map(process_file, file_info_list), total=len(file_info_list), desc=f"Processing {dataset}"):
                 pass
     

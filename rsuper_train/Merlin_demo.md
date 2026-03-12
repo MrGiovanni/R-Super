@@ -67,16 +67,11 @@ env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
 ```bash
 python dataset_conversion/rename_pants.py /path/to/data/you/downloaded/PanTS/ImagesTr/
 
+python dataset_conversion/rename_pants.py /path/to/data/you/downloaded/PanTS/LabelTr/
+
 python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_data/ --mapping dataset_conversion/mapping_merlin.csv
 
 python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
-
-python dataset_conversion/abdomenatlas_3d.py \
-    --src_path /path/to/data/you/downloaded/merlin_data/ \
-    --label_path /path/to/data/you/downloaded/merlin_per_voxel_masks/ \
-    --tgt_path /path/to/merlin_medformer_pancreas_normals/ --workers 16 \
-    --ids Merlin_pancreas_all_cases.csv \
-    --label_yaml dataset_conversion/label_names_report_dataset_pancreas.yaml
 ```
 
 
@@ -90,13 +85,10 @@ The command above converts all pancreatic lesion cases in Merlin (~2K) plus ~2K 
 > **Skip to Evaluation.**
 > The steps below are not needed if you are not going to train R-Super. In this case, skip from here to Evaluation.
 
-## Convert datasets from nifti to npz
+## Resample images and convert from nifti to npz
 
 Merlin:
 ```bash
-
-python dataset_conversion/rename_to_BDMAP.py --input_folder /path/to/data/you/downloaded/merlin_per_voxel_masks/ --mapping dataset_conversion/mapping_merlin.csv --masks
-
 python dataset_conversion/abdomenatlas_3d.py \
     --src_path /path/to/data/you/downloaded/merlin_data/ \
     --label_path /path/to/data/you/downloaded/merlin_per_voxel_masks/ \
@@ -104,22 +96,37 @@ python dataset_conversion/abdomenatlas_3d.py \
     --ids Merlin_pancreas_all_cases.csv \
     --label_yaml dataset_conversion/label_names_report_dataset_pancreas.yaml
 
-python nii2npz.py \
+python datast_conversion/nii2npz.py \
     --src_path /path/to/merlin_medformer_pancreas_normals/ \
-    --tgt_path /path/to/merlin_medformer_pancreas_normals_npz/
+    --tgt_path /path/to/merlin_medformer_pancreas_normals_npz/ \
+    --workers 16
 ```
 
 PanTS:
 ```bash
 python dataset_conversion/abdomenatlas_3d.py \
-    --src_path /path/to/data/you/downloaded/PanTS/ImagesTr/ \
-    --label_path /path/to/data/you/downloaded/PanTS/ImagesTr/ \
+    --src_path /path/to/data/you/downloaded/PanTS/ImageTr/ \
+    --label_path /path/to/data/you/downloaded/PanTS/LabelTr/ \
     --tgt_path /path/to/pants_medformer/ --workers 16 \
     --label_yaml dataset_conversion/label_names_mask_dataset_pancreas.yaml
 
-python nii2npz.py \
+python dataset_conversion/nii2npz.py \
     --src_path /path/to/pants_medformer/ \
-    --tgt_path /path/to/pants_medformer_npz/
+    --tgt_path /path/to/pants_medformer_npz/ \
+    --workers 16
+```
+
+```bash
+python dataset_conversion/abdomenatlas_3d.py \
+    --src_path /path/to/data/you/downloaded/PanTS/ImageTe/ \
+    --label_path /path/to/data/you/downloaded/PanTS/LabelTe/ \
+    --tgt_path /path/to/pants_medformer_test/ --workers 16 \
+    --label_yaml dataset_conversion/label_names_mask_dataset_pancreas.yaml
+
+python dataset_conversion/nii2npz.py \
+    --src_path /path/to/pants_medformer_test/ \
+    --tgt_path /path/to/pants_medformer_test_npz/ \
+    --workers 16
 ```
 
 
@@ -132,7 +139,7 @@ The function below is a continuous loop that must be **kept running during the e
 python AugmentEternal.py --dataset atlas_ufo --model medformer --dimension 3d --batch_size 2 \
 --crop_on_tumor --workers_overwrite 4 \
 --save_destination /path/to/Merlin_and_PanTS_Agumented/ \
---dataset_path /path/to/data/you/downloaded/PanTS/ImagesTr/ \
+--dataset_path /path/to/pants_medformer_npz/ \
 --UFO_root /path/to/merlin_medformer_pancreas_normals_npz/ \
 --ucsf_ids Merlin_pancreas_training_cases.csv \
 --reports Merlin_per_tumor_metadata_hf_clean.csv \
@@ -151,7 +158,7 @@ Our AI uses >30GB of GPU memory. To reduce it to ~20GB, add --crop_size 96 to th
 ```bash
 python train_ddp.py --dataset abdomenatlas_ufo --model medformer --dimension 3d --batch_size 4 --unique_name merlin_pancreas \
     --crop_on_tumor --gpu '0,1' --workers 4 --classes_number 42 --load_augmented \
-    --pretrain --pretrained './exp/abdomenatlas/MedFormerPanTS/fold_0_latest.pth' \
+    --pretrain --pretrained './exp/abdomenatlas/MedFormerPanTS/pants_pancreas_release/fold_0_latest.pth' \
     --loss ball_dice_last --dist_url tcp://127.0.0.1:9697 --report_volume_loss_basic 0.1 \
     --save_destination /path/to/Merlin_and_PanTS_Agumented/ \
     --data_root /path/to/data/you/downloaded/PanTS/ImagesTr/ \
@@ -182,7 +189,7 @@ Save binary tumor and organ segmentation masks created by R-Super. Add --save_pr
 ```bash
 python predict_abdomenatlas.py \
     --load "./exp/abdomenatlas_ufo/merlin_pancreas/fold_0_latest.pth" \
-    --img_path "/path/to/merlin_medformer_pancreas_normals/" \
+    --img_path "/path/to/merlin_medformer_pancreas_normals_npz/" \
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
     --gpu '0' --organ_mask_on_lesion \
     --save_path "./result/test_on_merlin/" \
@@ -223,7 +230,7 @@ All our evaluation code is set to evaluate R-Super. To evaluate the baseline mod
 
 ```bash
 python predict_abdomenatlas.py \
-    --load "./exp/abdomenatlas_ufo/MedFormerPanTS/fold_0_latest.pth" \
+    --load "./exp/abdomenatlas/MedFormerPanTS/pants_pancreas_release/fold_0_latest.pth" \
     --img_path "/path/to/merlin_medformer_pancreas_normals/" \
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
     --gpu '0' --organ_mask_on_lesion \
@@ -231,14 +238,14 @@ python predict_abdomenatlas.py \
     --ids  Merlin_pancreas_testing_cases.csv
 
 python test_with_reports.py \
-  --outputs_folder "./result/test_on_merlin/abdomenatlas/MedFormerPanTS/" \
+  --outputs_folder "./result/test_on_merlin/abdomenatlas/pants_pancreas_release/" \
   --ct_folder "/path/to/merlin_medformer_pancreas_normals/" \
   --workers 20 --continuing
 
 python calculate_sensitivity_specificity.py \
-  --predictions_csv "./result/test_on_merlin/abdomenatlas/MedFormerPanTS/tumor_detection_results.csv" \
+  --predictions_csv "./result/test_on_merlin/abdomenatlas/pants_pancreas_release/tumor_detection_results.csv" \
   --ground_truth_csv Merlin_metadata_hf_clean.csv \
-  --output_csv "./result/test_on_merlin/abdomenatlas/MedFormerPanTS/metrics.csv"
+  --output_csv "./result/test_on_merlin/abdomenatlas/pants_pancreas_release/metrics.csv"
 ```
 
 </div>
@@ -252,7 +259,7 @@ python calculate_sensitivity_specificity.py \
 ```bash
 python predict_abdomenatlas.py \
     --load "./exp/abdomenatlas_ufo/merlin_pancreas/fold_0_latest.pth" \
-    --img_path /path/to/data/you/downloaded/PanTS/ImagesTe/
+    --img_path /path/to/pants_medformer_test_npz/
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
     --gpu '0' --organ_mask_on_lesion \
     --save_path "./result/test_on_pants/" \
@@ -260,7 +267,7 @@ python predict_abdomenatlas.py \
 
 python test_with_reports.py \
   --outputs_folder "./result/test_on_pants/abdomenatlas/merlin_pancreas/" \
-  --ct_folder /path/to/data/you/downloaded/PanTS/ImagesTe/ \
+  --ct_folder /path/to/pants_medformer_test/ \
   --workers 20 --continuing
 
 python calculate_sensitivity_specificity.py \
