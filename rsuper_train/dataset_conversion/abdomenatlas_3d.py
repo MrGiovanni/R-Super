@@ -118,6 +118,8 @@ def process_case_bdmap_format(name,overwrite=False):
 
         # Load the CT image
         img_name = os.path.join(src_path, name, 'ct.nii.gz')
+        if not os.path.exists(img_name):
+            img_name = os.path.join(src_path, f'{name}.nii.gz')
         itk_img = read_sitk_with_nib_fallback(img_name)
 
         # Prepare the label dictionary
