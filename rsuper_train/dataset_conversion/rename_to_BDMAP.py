@@ -81,9 +81,12 @@ def rename_by_mapping(input_folder: Path, mapping_pairs, mapping_path_for_log: P
     planned = []
 
     for orig, new in mapping_pairs:
+        # Add ".nii.gz" extension to names
+        orig += ".nii.gz"
+        new += ".nii.gz"
         old_dir = input_folder / orig
         new_dir = input_folder / new
-        if not old_dir.exists() or not old_dir.is_dir():
+        if not old_dir.exists():
             missing.append(orig)
             continue
         if new_dir.exists():
@@ -93,7 +96,7 @@ def rename_by_mapping(input_folder: Path, mapping_pairs, mapping_path_for_log: P
 
     for old_dir, new_dir, orig, new in tqdm(planned, total=len(planned), desc="Renaming by mapping"):
         old_dir.rename(new_dir)
-        successes.append((orig, new))
+        successes.append((orig.rstrip(".nii.gz"), new.rstrip(".nii.gz")))
 
     with mapping_path_for_log.open("w", newline="") as csvfile:
         writer = csv.writer(csvfile)
