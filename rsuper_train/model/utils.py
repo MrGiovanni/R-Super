@@ -125,8 +125,8 @@ def get_model(args, pretrain=False, classes=None, classes_cls=None):
             if pretrain:
                 checkpoint = torch.load(args.pretrained, weights_only=False)
                 pretrained_model = checkpoint['model_state_dict']
-                net.load_state_dict(pretrained_model.state_dict(), strict=False)
-                print('Loaded checkpoint from:',args.pretrained)
+                state_dict = pretrained_model.state_dict() if hasattr(pretrained_model, 'state_dict') else pretrained_model
+                net.load_state_dict(state_dict, strict=False)
                 
             net.loss_wrapper = None #deprecated
             net.balancer = None #deprecated
