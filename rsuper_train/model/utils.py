@@ -123,13 +123,10 @@ def get_model(args, pretrain=False, classes=None, classes_cls=None):
             class_list_seg=class_list_seg,class_list_cls=class_list_cls, clip_branch=args.clip_loss,)
 
             if pretrain:
-                checkpoint = torch.load(args.pretrained)
-                try:
-                    net.load_state_dict(checkpoint['model_state_dict'], strict=False)
-                except:
-                    net.set_aggregator()
-                    net.load_state_dict(checkpoint['model_state_dict'], strict=False)
-                print('Loaded checkpoint from:',args.pretrained)
+                checkpoint = torch.load(args.pretrained, weights_only=False)
+                pretrained_model = checkpoint['model_state_dict']
+                state_dict = pretrained_model.state_dict() if hasattr(pretrained_model, 'state_dict') else pretrained_model
+                net.load_state_dict(state_dict, strict=False)
                 
             net.loss_wrapper = None #deprecated
             net.balancer = None #deprecated
