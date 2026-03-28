@@ -222,7 +222,7 @@ def get_lesion_channels(out, classes, assertion = False, return_class_names = Fa
         
 
     #from dicts to tensor
-    kys=list(lesion_out.keys())
+    kys = list(lesion_out.keys())
     lesion_out = torch.stack([lesion_out[key] for key in kys],dim=1).type_as(out)
     
     if assertion:
@@ -981,7 +981,7 @@ def calculate_loss(model_output, label, unk_voxels, args, matcher,chosen_segment
                             #print(f'Using the ball dice weight: {weight}')
                         else:
                             weight = 1
-                        if key not in list(loss_report.keys()):
+                        if key not in loss_report:
                             loss_report[key] = args.aux_weight[j] * args.report_volume_loss_basic * weight * loss_r[key]
                         else:
                             loss_report[key] = loss_report[key] + args.aux_weight[j] * args.report_volume_loss_basic * weight * loss_r[key]
