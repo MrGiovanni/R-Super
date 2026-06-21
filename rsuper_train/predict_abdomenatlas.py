@@ -253,7 +253,7 @@ def pad_to_training_size(tensor_img, args):
     if args.dimension == '3d':
         if z < args.training_size[0]:
             diff = (args.training_size[0]+2 - z) // 2
-            tensor_img = F.pad(tensor_img, (diff, diff, 0,0, 0,0))
+            tensor_img = F.pad(tensor_img, (0,0, 0,0, diff, diff))
             z_start = diff
             z_end = diff + z
         else:
@@ -271,7 +271,7 @@ def pad_to_training_size(tensor_img, args):
 
         if x < args.training_size[2]:
             diff = (args.training_size[2]+2 -x) // 2
-            tensor_img = F.pad(tensor_img, (0,0, 0,0, diff, diff))
+            tensor_img = F.pad(tensor_img, (diff, diff, 0,0, 0,0))
             x_start = diff
             x_end = diff + x
         else:
@@ -1138,8 +1138,10 @@ if __name__ == '__main__':
                 origin_orientation, [1.0,1.0,1.0], class_list, args)
             else:
                 pred_dict = postprocess_npz(pred_label, class_list, args)
-        except:
-            print('FAILED postprocess')
+        except Exception as e:
+            import traceback
+            print(f'FAILED postprocess for {img_name}: {type(e).__name__}: {e}')
+            traceback.print_exc()
             #raise ValueError('Failed to predict case:', img_name)
             with open('prediction_errors.txt', "a") as f:
                 f.write(str(os.path.join(args.img_path, img_name, 'ct.nii.gz')) + "\n")
