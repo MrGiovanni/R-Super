@@ -85,7 +85,9 @@ def CropForeground(imImage, imLabel, context_size=[10, 30, 30]):
     npLab = []
 
     # Convert labels to NumPy arrays and create the combined mask
-    for key in sorted(imLabel.keys()):  # Sort keys for consistent processing
+    # Cache sorted keys to avoid repeated sorting
+    sorted_keys = sorted(imLabel.keys())
+    for key in sorted_keys:
         item = sitk.GetArrayFromImage(imLabel[key])
         npLab.append(item)
     npLab = np.stack(npLab, axis=0)
@@ -113,10 +115,10 @@ def CropForeground(imImage, imLabel, context_size=[10, 30, 30]):
 
     img = npImg[z_min:z_max, y_min:y_max, x_min:x_max]
 
-    # Crop the labels
+    # Crop the labels using enumeration for efficient indexing
     lab = {}
-    for key in sorted(imLabel.keys()):  # Ensure consistent order
-        lab[key] = npLab[sorted(imLabel.keys()).index(key)][z_min:z_max, y_min:y_max, x_min:x_max]
+    for idx, key in enumerate(sorted_keys):
+        lab[key] = npLab[idx][z_min:z_max, y_min:y_max, x_min:x_max]
 
     # Convert cropped NumPy arrays back to SimpleITK images
     croppedImage = sitk.GetImageFromArray(img)
@@ -124,7 +126,7 @@ def CropForeground(imImage, imLabel, context_size=[10, 30, 30]):
     croppedImage.SetDirection(imImage.GetDirection())
 
     croppedLabel = {}
-    for key in lab.keys():
+    for key in lab:
         item = sitk.GetImageFromArray(lab[key])
         item.SetSpacing(imLabel[key].GetSpacing())  # Preserve label-specific spacing
         item.SetDirection(imLabel[key].GetDirection())  # Preserve label-specific direction

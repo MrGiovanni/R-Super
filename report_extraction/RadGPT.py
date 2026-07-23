@@ -19,7 +19,6 @@ from concurrent.futures import ThreadPoolExecutor
 import csv
 import ast
 import time
-import ast
 from itertools import chain
 import matplotlib.pyplot as plt
 import tqdm
@@ -2536,7 +2535,7 @@ def merge_dicts(dict1, dict2):
     merged_dict = {}
 
     # Get all keys from both dictionaries
-    all_keys = set(dict1.keys()).union(set(dict2.keys()))
+    all_keys = dict1.keys() | dict2.keys()
 
     for key in all_keys:
         # Fetch values from both dictionaries; default to empty list
