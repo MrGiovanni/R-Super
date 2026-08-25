@@ -44,8 +44,8 @@ MICCAI 2025, [**Best Paper Award**](https://miccai.org/index.php/about-miccai/aw
 <a href='https://youtu.be/r11X39fH-yU?si=ZOBlHMo1CvN9aVzb'><img src='https://img.shields.io/badge/Oral-RSNA-orange'></a>
 
 <b>Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks</b> <br/>
-[Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Zheren Zhu, Tianyu Lin, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
-*Johns Hopkins University* <br/> 
+[Pedro R. A. S. Bassi](https://scholar.google.com/citations?user=NftgL6gAAAAJ&hl=en), Xinze Zhou, [Wenxuan Li](https://scholar.google.com/citations?hl=en&user=tpNZM2YAAAAJ), Szymon Płotka, [Jieneng Chen](https://scholar.google.com/citations?user=yLYj88sAAAAJ&hl=zh-CN), Qi Chen, Zheren Zhu, Jakub Prządo, Ibrahim E. Hamacı, Sezgin Er, Yuhan Wang, Ashwin Kumar, Bjoern Menze, Jarosław B. Ćwikła, Yuyin Zhou, Akshay S. Chaudhari, Curtis P. Langlotz, [Sergio Decherchi](https://scholar.google.com/citations?user=T09qQ1IAAAAJ&hl=it), [Andrea Cavalli](https://scholar.google.com/citations?user=4xTOvaMAAAAJ&hl=en), [Kang Wang](https://radiology.ucsf.edu/people/kang-wang), [Yang Yang](https://scholar.google.com/citations?hl=en&user=6XsJUBIAAAAJ), [Alan L. Yuille](https://www.cs.jhu.edu/~ayuille/), [Zongwei Zhou](https://www.zongweiz.com/)* <br/>
+*Johns Hopkins University, Stanford University, University of Zurich, University of Warsaw, Italian Institute of Technology, UCSF* <br/>
 Preprint <br/>
 <a href='https://www.cs.jhu.edu/~zongwei/publication/bassi2025scaling.pdf'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
 ## Awards
@@ -55,7 +55,7 @@ Preprint <br/>
 </p> 
 
 - RSNA 2025 Certificate of Merit Award
-- ${\color{red} {\textbf{MICCAI 2025 Best Paper Award (Runner-up, top 2 in 1,027 papers)}}}$ <br/>
+- ${\color{red} {\textbf{MICCAI 2025 Best Paper Award (Runner-up)}}}$ <br/>
 
 
 
@@ -95,7 +95,7 @@ For inference instructions, check the evaluation section [here](rsuper_train/REA
 
 
 
-> The checkpoint 'R-Super (Paper)' is the public segmentation checkpoint trained with **the largest number of lesion CT scans (5K)** that we know of: *2.2K pancreatic lesion CT-Report pairs, 344 pancreatic lesion CT-Mask pairs, 2.7K kidney lesion CT-Report pairs, 1.7K kidney lesion CT-Mask pairs, 9K controls w/o kidney or pancreas tumors.*
+> The checkpoint 'R-Super (Paper)' is the public segmentation checkpoint trained with **the largest number of lesion CT scans (6.9K)** that we know of: *2.2K pancreatic lesion CT-Report pairs, 344 pancreatic lesion CT-Mask pairs, 2.7K kidney lesion CT-Report pairs, 1.7K kidney lesion CT-Mask pairs, 9K controls w/o kidney or pancreas tumors.*
 
 
 
@@ -159,26 +159,24 @@ If you use the code, data or methods in this repository, please cite:
 ```
 @inproceedings{bassi2025learning,
   title={Learning Segmentation from Radiology Reports},
-  author={Bassi, Pedro RAS and Li, Wenxuan and Chen, Jieneng and Zhu, Zheren and Lin, Tianyu and Decherchi, Sergio and Cavalli, Andrea and Wang, Kang and Yang, Yang and Yuille, Alan L and others},
+  author={Bassi, Pedro R. A. S. and Li, Wenxuan and Chen, Jieneng and Zhu, Zheren and Lin, Tianyu and Decherchi, Sergio and Cavalli, Andrea and Wang, Kang and Yang, Yang and Yuille, Alan L. and Zhou, Zongwei},
   booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
   pages={305--315},
   year={2025},
-  organization={Springer}
-<<<<<<< Updated upstream
+  publisher={Springer},
+  doi={10.1007/978-3-032-04971-1_29}
 }
 
 @article{bassi2025scaling,
   title={Scaling Artificial Intelligence for Multi-Tumor Early Detection with More Reports, Fewer Masks},
-  author={Bassi, Pedro RAS and Zhou, Xinze and Li, Wenxuan and P{\l}otka, Szymon and Chen, Jieneng and Chen, Qi and Zhu, Zheren and Prz{\k{a}}do, Jakub and Hamac{\i}, Ibrahim E and Er, Sezgin and others},
+  author={Bassi, Pedro R. A. S. and Zhou, Xinze and Li, Wenxuan and P{\l}otka, Szymon and Chen, Jieneng and Chen, Qi and Zhu, Zheren and Prz{\k{a}}do, Jakub and Hamamci, Ibrahim E. and Er, Sezgin and others},
   journal={arXiv preprint arXiv:2510.14803},
   year={2025}
-=======
->>>>>>> Stashed changes
 }
 
 @inproceedings{bassi2025radgpt,
   title={RadGPT: Constructing 3D Image-Text Tumor Datasets},
-  author={Bassi, Pedro RAS and Yavuz, Mehmet Can and Wang, Kang and Chen, Xiaoxi and Li, Wenxuan and Decherchi, Sergio and Cavalli, Andrea and Yang, Yang and Yuille, Alan and Zhou, Zongwei},
+  author={Bassi, Pedro R. A. S. and Yavuz, Mehmet Can and Hamamci, Ibrahim Ethem and Er, Sezgin and Chen, Xiaoxi and Li, Wenxuan and Menze, Bjoern and Decherchi, Sergio and Cavalli, Andrea and Wang, Kang and Yang, Yang and Yuille, Alan and Zhou, Zongwei},
   booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
   pages={23720--23730},
   year={2025}
