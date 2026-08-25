@@ -1,0 +1,77 @@
+cff-version: 1.2.0
+message: "If you use R-Super, please cite the MICCAI 2025 paper below."
+title: "R-Super: report-supervised tumor segmentation from radiology reports"
+abstract: "Official implementation of R-Super, which learns voxel-level tumor segmentation from free-text radiology reports instead of manual voxel annotations."
+type: software
+repository-code: "https://github.com/MrGiovanni/R-Super"
+url: "https://github.com/MrGiovanni/R-Super"
+license: CC-BY-NC-ND-4.0
+keywords:
+  - "report-supervision"
+  - "weak-supervision"
+  - "tumor-segmentation"
+  - "radiology-reports"
+  - "ct"
+  - "medical-imaging"
+authors:
+  - family-names: "Bassi"
+    given-names: "Pedro R. A. S."
+  - family-names: "Li"
+    given-names: "Wenxuan"
+  - family-names: "Chen"
+    given-names: "Jieneng"
+  - family-names: "Zhu"
+    given-names: "Zheren"
+  - family-names: "Lin"
+    given-names: "Tianyu"
+  - family-names: "Decherchi"
+    given-names: "Sergio"
+  - family-names: "Cavalli"
+    given-names: "Andrea"
+  - family-names: "Wang"
+    given-names: "Kang"
+  - family-names: "Yang"
+    given-names: "Yang"
+  - family-names: "Yuille"
+    given-names: "Alan L."
+  - family-names: "Zhou"
+    given-names: "Zongwei"
+    orcid: "https://orcid.org/0000-0002-3154-9851"
+preferred-citation:
+  type: conference-paper
+  title: "Learning Segmentation from Radiology Reports"
+  authors:
+    - family-names: "Bassi"
+      given-names: "Pedro R. A. S."
+    - family-names: "Li"
+      given-names: "Wenxuan"
+    - family-names: "Chen"
+      given-names: "Jieneng"
+    - family-names: "Zhu"
+      given-names: "Zheren"
+    - family-names: "Lin"
+      given-names: "Tianyu"
+    - family-names: "Decherchi"
+      given-names: "Sergio"
+    - family-names: "Cavalli"
+      given-names: "Andrea"
+    - family-names: "Wang"
+      given-names: "Kang"
+    - family-names: "Yang"
+      given-names: "Yang"
+    - family-names: "Yuille"
+      given-names: "Alan L."
+    - family-names: "Zhou"
+      given-names: "Zongwei"
+      orcid: "https://orcid.org/0000-0002-3154-9851"
+  collection-title: "Medical Image Computing and Computer Assisted Intervention (MICCAI 2025)"
+  publisher:
+    name: "Springer Nature Switzerland"
+  start: 305
+  end: 315
+  year: 2025
+  doi: "10.1007/978-3-032-04971-1_29"
+identifiers:
+  - type: other
+    value: "arXiv:2507.05582"
+    description: "Preprint version"

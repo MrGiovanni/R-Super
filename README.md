@@ -164,6 +164,7 @@ If you use the code, data or methods in this repository, please cite:
   pages={305--315},
   year={2025},
   organization={Springer}
+<<<<<<< Updated upstream
 }
 
 @article{bassi2025scaling,
@@ -171,12 +172,15 @@ If you use the code, data or methods in this repository, please cite:
   author={Bassi, Pedro RAS and Zhou, Xinze and Li, Wenxuan and P{\l}otka, Szymon and Chen, Jieneng and Chen, Qi and Zhu, Zheren and Prz{\k{a}}do, Jakub and Hamac{\i}, Ibrahim E and Er, Sezgin and others},
   journal={arXiv preprint arXiv:2510.14803},
   year={2025}
+=======
+>>>>>>> Stashed changes
 }
 
-@article{bassi2025radgpt,
-  title={Radgpt: Constructing 3d image-text tumor datasets},
+@inproceedings{bassi2025radgpt,
+  title={RadGPT: Constructing 3D Image-Text Tumor Datasets},
   author={Bassi, Pedro RAS and Yavuz, Mehmet Can and Wang, Kang and Chen, Xiaoxi and Li, Wenxuan and Decherchi, Sergio and Cavalli, Andrea and Yang, Yang and Yuille, Alan and Zhou, Zongwei},
-  journal={arXiv preprint arXiv:2501.04678},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={23720--23730},
   year={2025}
 }
 ```
