@@ -122,7 +122,7 @@ def validation_ddp(net, dataloader, args, matcher=None):
             if args.dimension == '2d':
                 inputs = inputs.permute(1, 0, 2, 3)
             
-            pred = inference(net, inputs, args)
+            label_pred = inference(net, inputs, args)
 
             #_, label_pred = torch.max(pred, dim=1)
             #use threshold, not max for multi-label cases
