@@ -3,3 +3,8 @@
 ._*
 .Spotlight-V100
 .Trashes
+rsuper_train/test_merlin_baseline.sh
+rsuper_train/test_merlin_r_super.sh
+rsuper_train/test_merlin_r_super_metrics.sh
+rsuper_train/.DS_Store
+rsuper_train/.DS_Store

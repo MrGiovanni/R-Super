@@ -179,7 +179,13 @@ def restrictive_filtering(
 
 def prediction(model_list, tensor_img, args, tgt_organ=None):
     
+    save_raw = (args.save_probabilities_lesions or args.save_probabilities_report_tumors_only or args.save_probabilities or getattr(args,'prob_resample',False))
+    
     inference = get_inference(args)
+    cls_out = None
+    
+    assert len(model_list) == 1, 'Ensemble not supported yet'
+    model = model_list[0]
 
     with torch.no_grad():
         D, H, W = tensor_img.shape
@@ -187,63 +193,82 @@ def prediction(model_list, tensor_img, args, tgt_organ=None):
         
         tensor_img = tensor_img.unsqueeze(0).unsqueeze(0)
         
-        z_len = 800
+        z_len = 768
         if D > z_len:
             num_z_chunks = math.ceil(D / z_len)
             z_chunk_len = math.ceil(D / num_z_chunks)
 
             
             label_pred_list = []
-            raw_pred_list = []
+            if save_raw:
+                raw_pred_list = []
+            cls_list = []
             for i in range(num_z_chunks):
                 image_chunk = tensor_img[:, :, i*z_chunk_len: (i+1)*z_chunk_len, :, :]
                 _, _, D1, H1, W1 = image_chunk.shape
 
                 print(f'Shape of the chunk path: {image_chunk.shape}')
 
-                tensor_pred = torch.zeros([args.classes, D1, H1, W1])
-                for model in model_list:
-                    pred = inference(model, image_chunk, args, pancreas=tgt_organ)
-                    print('Pred shape:',pred.shape)
-                    tensor_pred = tensor_pred.type_as(pred) 
-                    pred = pred.squeeze(0) 
-                    tensor_pred += pred    
+                tensor_pred = torch.zeros([args.classes, D1, H1, W1],dtype=torch.bfloat16)
+
+                pred = inference(model, image_chunk, args, pancreas=tgt_organ)
+                if isinstance(pred, list) or isinstance(pred, tuple):
+                    clss = pred[1]
+                    cls_list.append(clss)
+                    pred = pred[0]
+                print('Pred shape:',pred.shape)
+                pred = pred.to(torch.bfloat16)
+                tensor_pred = tensor_pred.type_as(pred) 
+                pred = pred.squeeze(0) 
+                tensor_pred += pred    
+                    
                
-                label_pred = tensor_pred>0.5
+                label_pred = tensor_pred>args.binarize_th
                 label_pred = label_pred.to(torch.uint8)
-                raw_pred = tensor_pred.clone().cpu()
+                if save_raw:
+                    raw_pred = tensor_pred.clone().cpu()
                 del tensor_pred
                 torch.cuda.empty_cache()
 
                 label_pred_list.append(label_pred)
-                raw_pred_list.append(raw_pred)
+                if save_raw:
+                    raw_pred_list.append(raw_pred)
             
             label_pred = torch.cat(label_pred_list, dim=1)
-            raw_pred =  torch.cat(raw_pred_list, dim=1)
+            if save_raw:
+                raw_pred =  torch.cat(raw_pred_list, dim=1)
+            if len(cls_list)>0:
+                cls_out = torch.stack(cls_list, dim=0).amax(dim=0)
 
         else:
-            tensor_pred = torch.zeros([args.classes, D, H, W])
+            tensor_pred = torch.zeros([args.classes, D, H, W],dtype=torch.bfloat16)
 
-            for model in model_list:
-                pred = inference(model, tensor_img, args, pancreas=tgt_organ)
-                tensor_pred = tensor_pred.type_as(pred) 
-                
-                if args.dimension == '2d':
-                    pred = pred.permute(1, 0, 2, 3)
-                else:
-                    pred = pred.squeeze(0)
-                
-                tensor_pred += pred       
+            pred = inference(model, tensor_img, args, pancreas=tgt_organ)
+            if isinstance(pred, list) or isinstance(pred, tuple):
+                cls_out = pred[1]
+                pred = pred[0]
+            pred = pred.to(torch.bfloat16)
+            tensor_pred = tensor_pred.type_as(pred) 
+            
+            if args.dimension == '2d':
+                pred = pred.permute(1, 0, 2, 3)
+            else:
+                pred = pred.squeeze(0)
+            
+            tensor_pred += pred       
            
             #_, label_pred = torch.max(tensor_pred, dim=0)
-            label_pred = tensor_pred>0.5
+            label_pred = tensor_pred>args.binarize_th
             label_pred = label_pred.to(torch.uint8)
-            raw_pred = tensor_pred.clone().cpu()
+            if save_raw:
+                raw_pred = tensor_pred.clone().cpu()
             del pred
             torch.cuda.empty_cache()
 
+    if not save_raw:
+        raw_pred = None
 
-    return label_pred, raw_pred
+    return label_pred, raw_pred, cls_out
 
 
 def pad_to_training_size(tensor_img, args):
@@ -253,7 +278,7 @@ def pad_to_training_size(tensor_img, args):
     if args.dimension == '3d':
         if z < args.training_size[0]:
             diff = (args.training_size[0]+2 - z) // 2
-            tensor_img = F.pad(tensor_img, (0,0, 0,0, diff, diff))
+            tensor_img = F.pad(tensor_img, (diff, diff, 0,0, 0,0))
             z_start = diff
             z_end = diff + z
         else:
@@ -271,7 +296,7 @@ def pad_to_training_size(tensor_img, args):
 
         if x < args.training_size[2]:
             diff = (args.training_size[2]+2 -x) // 2
-            tensor_img = F.pad(tensor_img, (diff, diff, 0,0, 0,0))
+            tensor_img = F.pad(tensor_img, (0,0, 0,0, diff, diff))
             x_start = diff
             x_end = diff + x
         else:
@@ -355,7 +380,32 @@ def preprocess(itk_img, target_spacing, args):
 
     return tensor_img, original_idx, origin_orientation, re_img_xyz
 
-def postprocess_non_binary(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing, classes, args):
+def _lesion_like(name):
+    return any(t in name for t in ('lesion','tumor','pdac','pnet','cyst','malignant','benign'))
+
+def _largest_component(mask):
+    """Keep only the largest 26-connected component. Applied to lesion classes on the
+    ORIGINAL grid (after resampling): component structure is not preserved through
+    resampling, so doing this earlier would be a different operation."""
+    if not mask.any():
+        return mask
+    idx = np.argwhere(mask)
+    lo = np.maximum(idx.min(0) - 2, 0)
+    hi = np.minimum(idx.max(0) + 3, np.array(mask.shape))
+    sl = tuple(slice(a, b) for a, b in zip(lo, hi))
+    sub = mask[sl]
+    lab, n = ndi.label(sub, np.ones((3, 3, 3), bool))
+    if n <= 1:
+        return mask
+    sizes = ndi.sum(sub, lab, range(1, n + 1))
+    keep = np.zeros(n + 1, bool)
+    keep[int(np.argmax(sizes)) + 1] = True
+    out = np.zeros_like(mask)
+    out[sl] = keep[lab]
+    return out
+
+def postprocess_non_binary(pred, reoriented_itk_img, original_idx, origin_orientation,
+                           target_spacing, classes, args, original_itk_img):
     # Remove any squeezing if needed.
     pred = pred.squeeze(0)
     pred_dict = {}
@@ -377,16 +427,20 @@ def postprocess_non_binary(pred, reoriented_itk_img, original_idx, origin_orient
                         )
 
         # Create a SimpleITK image, preserving the float values.
-        itk_pred = sitk.GetImageFromArray(tensor_pred.cpu().numpy().astype(np.float32))
+        itk_pred = sitk.GetImageFromArray(tensor_pred.float().cpu().numpy().astype(np.float32))
         itk_pred.CopyInformation(reoriented_itk_img)
         itk_pred = reorient_image(itk_pred, origin_orientation)
 
         pred_dict[classes[i]] = itk_pred
 
+    for key, img in list(pred_dict.items()):
+        pred_dict[key] = ResampleLabelToRef(img,original_itk_img,interp=sitk.sitkLinear  # continuous, good for probabilities
+        )
+
     return pred_dict
 
 
-def postprocess(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing, classes, args):
+def postprocess(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing, classes, args, original_itk_img):
     print(f'Shape of the prediction for postprocessing: {pred.shape}')
     pred = pred.squeeze(0)
     pred_dict = {}
@@ -410,7 +464,7 @@ def postprocess(pred, reoriented_itk_img, original_idx, origin_orientation, targ
             target_spacing, tensor_pred.shape[::-1], reoriented_itk_img.GetSpacing(), 
             reoriented_itk_img.GetSize(), interp='nearest').long()
         
-        itk_pred = sitk.GetImageFromArray(tensor_pred.cpu().numpy().astype(np.uint8))
+        itk_pred = sitk.GetImageFromArray(tensor_pred.float().cpu().numpy().astype(np.uint8))
         itk_pred.CopyInformation(reoriented_itk_img)
 
         itk_pred = reorient_image(itk_pred, origin_orientation)
@@ -436,7 +490,7 @@ def postprocess(pred, reoriented_itk_img, original_idx, origin_orientation, targ
             target_spacing, tensor_pred.shape[::-1], reoriented_itk_img.GetSpacing(), 
             reoriented_itk_img.GetSize(), interp='nearest').long()
         
-        itk_pred = sitk.GetImageFromArray(tensor_pred.cpu().numpy().astype(np.uint8))
+        itk_pred = sitk.GetImageFromArray(tensor_pred.float().cpu().numpy().astype(np.uint8))
         itk_pred.CopyInformation(reoriented_itk_img)
 
         itk_pred = reorient_image(itk_pred, origin_orientation)
@@ -505,11 +559,16 @@ def postprocess(pred, reoriented_itk_img, original_idx, origin_orientation, targ
             #get only largest connected component
         
         pred_dict[classes[i]] = itk_lab
+    
+    for key, img in list(pred_dict.items()):
+        # Resample label to match the original CT spacing exactly
+        pred_dict[key] = ResampleLabelToRef(img, original_itk_img)
 
     return pred_dict
 
 
-def postprocess_non_binary_lesion(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing, classes, args):
+def postprocess_non_binary_lesion(pred, reoriented_itk_img, original_idx, origin_orientation, target_spacing,
+                                  classes, args, original_itk_img):
     print(f'Shape of the prediction for postprocessing: {pred.shape}')
     pred = pred.squeeze(0)
     pred_dict = {}
@@ -529,7 +588,7 @@ def postprocess_non_binary_lesion(pred, reoriented_itk_img, original_idx, origin
                 reoriented_itk_img.GetSpacing(), reoriented_itk_img.GetSize(),
                 interp="nearest")
 
-        itk_pred = sitk.GetImageFromArray(tensor_pred.cpu().numpy())   # scores
+        itk_pred = sitk.GetImageFromArray(tensor_pred.float().cpu().numpy())   # scores
         itk_pred.CopyInformation(reoriented_itk_img)
         itk_pred = reorient_image(itk_pred, origin_orientation)
 
@@ -552,7 +611,7 @@ def postprocess_non_binary_lesion(pred, reoriented_itk_img, original_idx, origin
             tensor_pred.shape[::-1], reoriented_itk_img.GetSpacing(), 
             reoriented_itk_img.GetSize(), interp='trilinear')
         
-        itk_pred = sitk.GetImageFromArray(tensor_pred.cpu().numpy().astype(np.float32))
+        itk_pred = sitk.GetImageFromArray(tensor_pred.float().cpu().numpy().astype(np.float32))
         itk_pred.CopyInformation(reoriented_itk_img)
 
         itk_pred = reorient_image(itk_pred, origin_orientation)
@@ -631,6 +690,14 @@ def postprocess_non_binary_lesion(pred, reoriented_itk_img, original_idx, origin
         itk_lab = sitk.Cast(itk_lab, sitk.sitkFloat32)   
         
         pred_dict[classes[i]] = itk_lab
+        
+    # Map probabilities back to the original CT geometry
+    for key, img in list(pred_dict.items()):
+        pred_dict[key] = ResampleLabelToRef(
+            img,
+            original_itk_img,
+            interp=sitk.sitkLinear  # correct for probabilities
+        )
 
     return pred_dict
 
@@ -645,14 +712,14 @@ def postprocess_npz(pred, classes, args):
         if 'lesion' in classes[i]:
             continue
         tensor_pred = pred[i]
-        np_pred = tensor_pred.cpu().numpy()
+        np_pred = tensor_pred.float().cpu().numpy()
         pred_dict[classes[i]] = np_pred
 
     #now do lesions
     for i in range(pred.shape[0]):
         if 'lesion' not in classes[i]:
             continue
-        np_pred = pred[i].cpu().numpy()
+        np_pred = pred[i].float().cpu().numpy()
 
         if args.organ_mask_on_lesion:
             # remove anything outside of the organ
@@ -752,35 +819,48 @@ def init_model(args,classes,old_classes=None):
         c = old_classes # we must load the checkpoint with the old classes
     else:
         c = classes
+        
+    if args.update_output_layer or args.malignancy_classification:
+        from model.dim3.medformer import update_output_layer_onk
+        print('Classes for onk:', classes)
+        if args.malignancy_classification and old_classes is None:
+            old_classes = classes
+        if args.malignancy_classification:
+            lesion_classes = [c for c in sorted(classes) if 'lesion' in c]
+            malignants = [c.replace('lesion', 'malignant') for c in lesion_classes]
+            benigns = [c.replace('lesion', 'benign') for c in lesion_classes]
+            new_classes = classes + malignants + benigns
+        else:
+            new_classes = classes
+    else:
+        new_classes = classes
+    
+    
 
     model_list = []
     for ckp_path in args.load:
         print('Number of classes for model loading: ', len(c))
         model = get_model(args,classes=c)
+        if args.update_output_layer or args.malignancy_classification:
+            from model.dim3.medformer import update_output_layer_onk
+            model=update_output_layer_onk(model, original_classes=old_classes, new_classes=new_classes,
+                                            age_and_sex=args.age_and_sex_into_classifier)
         if not args.EMA:
             pth = torch.load(ckp_path, map_location=torch.device('cpu'))['model_state_dict']
         else:
             pth = torch.load(ckp_path, map_location=torch.device('cpu'))['ema_model_state_dict']
-        try:
+        if isinstance(pth, torch.nn.Module):
             pth = pth.state_dict()
-        except:
-            pass
         model.load_state_dict(pth,strict=False)
         model.cuda()
         model.eval()
         model_list.append(model)
         print(f"Model loaded from {ckp_path}")
 
-    if args.update_output_layer:
-        from model.dim3.medformer import update_output_layer_onk
-        model=update_output_layer_onk(model, original_classes=old_classes, new_classes=classes)
-        #cuda
-        model.cuda()
-        model.eval()
-        #print shape of last conv layer
+    
         
 
-    return model_list
+    return model_list, new_classes
 
 def _nii_stem(fn: str) -> str:
     # convert 'adrenal_gland_left.nii.gz' -> 'adrenal_gland_left'
@@ -853,6 +933,24 @@ def get_parser():
     parser.add_argument('--gpu', type=str, default='0')
     parser.add_argument('--class_list', type=str, default='/projects/bodymaps/Pedro/data/atlas_300_medformer_npy/list/label_names.yaml')
     parser.add_argument('--connected_components', action='store_true', help='whether to keep the largest connected component')
+    parser.add_argument('--lesion_largest_component', action='store_true',
+                        help='Postprocessing: for lesion classes only, keep just the largest '
+                             'connected component and delete the rest. Applied on the original '
+                             'grid, after resampling. Removes spurious blobs; note it also '
+                             'discards genuine multifocal disease by construction.')
+    parser.add_argument('--binarize_th', type=float, default=0.5,
+                        help='Probability threshold used to binarise lesion predictions. '
+                             'Lower values counteract the under-segmentation of the single-pass path.')
+    parser.add_argument('--prob_resample', action='store_true',
+                        help='Resample the PROBABILITY map (trilinear) and binarise afterwards, instead of '
+                             'binarising first and resampling the mask with nearest-neighbour. Reduces '
+                             'resampling loss, and is required for --binarize_th to behave smoothly.')
+    parser.add_argument('--tta', type=str, default='none', choices=['none','rotation'],
+                        help="Test-time augmentation. 'rotation' averages predictions over axial rotations "
+                             "inside the +-30 deg range used in training. Flip/mirror TTA is NOT offered: "
+                             "the model is never trained with mirroring, and it degrades results.")
+    parser.add_argument('--tta_angle', type=float, default=15.0,
+                        help='Rotation magnitude (degrees) for --tta rotation; views are 0, +a, -a.')
     parser.add_argument('--organ_mask_on_lesion', action='store_true', help='whether to keep the largest connected component')
     parser.add_argument('--classification_branch', action='store_true', help='whether to use the classification branch')
     parser.add_argument('--cls_gate', action='store_true', help='multiplies the segmentation sigmoid output by the classification sigmoid output--gate')
@@ -877,6 +975,8 @@ def get_parser():
 
     parser.add_argument('--aggregator_mode', type=str, default='concat', help='mode for the aggregator')
     parser.add_argument('--cls_on_output', action='store_true', help='if true, the classification branch is on the output of the model, otherwise it is on the bottleneck')
+    parser.add_argument('--cls_on_segmentation', action='store_true', help='if true, the classification branch is on the output of the model, otherwise it is on the bottleneck')
+    parser.add_argument('--binarize_cls_on_segmentation', action='store_true', help='if true, the classification branch on the segmentation output receives binary inputs (straight through trick)')
 
     #extra classifiers on top of the segmentation output
     parser.add_argument('--attenuation_classifier', type=str, default='none')
@@ -890,13 +990,19 @@ def get_parser():
     
     #parser.add_argument('--class_list', type=str, default='/projects/bodymaps/Pedro/data/atlas_300_medformer_multi_ch_tumor_npy/list/label_names.yaml')
 
+    parser.add_argument('--malignancy_classification', action='store_true', help='will train to differentiate between benign and malignant tumors, adds benign and malignant classes beyond the lesion classes')
+    parser.add_argument('--age_and_sex_into_classifier', action='store_true', help='will train to differentiate between benign and malignant tumors, adds benign and malignant classes beyond the lesion classes')
     
-
+    
+    
     args = parser.parse_args()
 
 
     args.clip_loss = False
     args.load_clip = False
+    
+    if args.age_and_sex_into_classifier or 'sex' in args.load[0] or 'age' in args.load[0]:
+        raise ValueError('You need to implementing the loading of the age and sex metadata in validation!')
 
     #latest folder of load
     if isinstance(args.load, list):
@@ -918,6 +1024,8 @@ def get_parser():
     for key, value in config.items():
         setattr(args, key, value)
 
+    if getattr(args,'tta','none')=='rotation':
+        os.environ['RSUPER_ROT']=str(args.tta_angle); os.environ['RSUPER_NROT']='3'
     args.inference_2_stages=True
     if args.disable_inference_2_stages:
         args.inference_2_stages=False
@@ -1063,7 +1171,9 @@ if __name__ == '__main__':
 
 
 
-    model_list = init_model(args,classes=class_list,old_classes=old_classes)
+    model_list, class_list = init_model(args,classes=class_list,old_classes=old_classes)
+    args.class_list = class_list
+    args.classes = len(class_list)
 
     random.shuffle(ids)
 
@@ -1116,10 +1226,12 @@ if __name__ == '__main__':
                     assert labels.shape[0] < (args.classes+10)
                     assert labels.shape[0] >= (args.classes)
                     labels = labels[:args.classes]
-                pancreas = labels[sorted(class_list).index('pancreas')]
+                pancreas = labels[class_list.index('pancreas')]
                 pancreas = torch.from_numpy(pancreas).cuda().float()
             
-        pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)    
+        #count time
+        prediction_start = time.time()
+        pred_label, pred_raw, cls_out = prediction(model_list, tensor_img, args, tgt_organ=pancreas)    
         #try:
         #    pred_label, pred_raw = prediction(model_list, tensor_img, args, tgt_organ=pancreas)
         #    print('Predicted case:', img_name)
@@ -1129,25 +1241,27 @@ if __name__ == '__main__':
         #    with open('prediction_errors.txt', "a") as f:
         #        f.write(str(os.path.join(args.img_path, img_name, 'ct.nii.gz')) + "\n")
         #    continue
+        prediction_end = time.time()
+        print(f"Time for prediction of {img_name}: {prediction_end - prediction_start} seconds")
         
 
 
+        postprocess_start = time.time()
         try:
             if 'nii.gz' in img_name:
                 pred_dict = postprocess(pred_label, reoriented_itk_img, original_idx, 
-                origin_orientation, [1.0,1.0,1.0], class_list, args)
+                origin_orientation, [1.0,1.0,1.0], class_list, args, tmp_itk_img)
             else:
                 pred_dict = postprocess_npz(pred_label, class_list, args)
-        except Exception as e:
-            import traceback
-            print(f'FAILED postprocess for {img_name}: {type(e).__name__}: {e}')
-            traceback.print_exc()
+        except:
+            print('FAILED postprocess')
             #raise ValueError('Failed to predict case:', img_name)
             with open('prediction_errors.txt', "a") as f:
                 f.write(str(os.path.join(args.img_path, img_name, 'ct.nii.gz')) + "\n")
             continue
 
         toc = time.time()
+        print(f"Time for postprocessing and saving of {img_name}: {toc - postprocess_start} seconds")
         
         if not os.path.exists(os.path.join(args.save_path, case_id, 'predictions')):
             os.makedirs(os.path.join(args.save_path, case_id, 'predictions'))
@@ -1160,6 +1274,28 @@ if __name__ == '__main__':
                     tmp[key] = pred_dict[key]
             pred_dict = tmp
             
+        if getattr(args,'prob_resample',False) and 'nii.gz' in img_name:
+            # resample probabilities (trilinear), then binarise -> avoids the
+            # nearest-neighbour resampling loss of the threshold-first path
+            _pr = postprocess_non_binary(pred_raw, reoriented_itk_img, original_idx,
+                                         origin_orientation, [1.0,1.0,1.0], class_list, args,
+                                         tmp_itk_img)
+            for _k in list(pred_dict.keys()):
+                if _k in _pr and _lesion_like(_k):
+                    _a = sitk.GetArrayFromImage(_pr[_k])
+                    _b = sitk.GetImageFromArray((_a > args.binarize_th).astype(np.uint8))
+                    _b.CopyInformation(pred_dict[_k])
+                    pred_dict[_k] = _b
+
+        if getattr(args,'lesion_largest_component',False) and 'nii.gz' in img_name:
+            # lesion classes only - never applied to organs
+            for _k in list(pred_dict.keys()):
+                if _lesion_like(_k):
+                    _m = sitk.GetArrayFromImage(pred_dict[_k]) > 0
+                    _b = sitk.GetImageFromArray(_largest_component(_m).astype(np.uint8))
+                    _b.CopyInformation(pred_dict[_k])
+                    pred_dict[_k] = _b
+
         if not args.not_save_binary:
             for key in pred_dict.keys():
                 if 'nii.gz' in img_name:
@@ -1172,7 +1308,8 @@ if __name__ == '__main__':
         if args.save_probabilities:
             if 'nii.gz' in img_name:
                 pred_raw_dict = postprocess_non_binary(pred_raw, reoriented_itk_img, original_idx, 
-                                            origin_orientation, [1.0,1.0,1.0], class_list, args)
+                                            origin_orientation, [1.0,1.0,1.0], class_list, args,
+                                            tmp_itk_img)
             else:
                 pred_raw_dict = postprocess_npz(pred_raw, class_list, args)
             if args.save_pancreas_lesion_only:
@@ -1194,7 +1331,7 @@ if __name__ == '__main__':
         if args.save_probabilities_lesions or args.save_probabilities_report_tumors_only:
             if 'nii.gz' in img_name:
                 pred_raw_dict = postprocess_non_binary_lesion(pred_raw, reoriented_itk_img, original_idx, 
-                                            origin_orientation, [1.0,1.0,1.0], class_list, args)
+                                            origin_orientation, [1.0,1.0,1.0], class_list, args, tmp_itk_img)
             else:
                 pred_raw_dict = postprocess_npz(pred_raw, class_list, args)
             if args.save_pancreas_lesion_only:
@@ -1224,6 +1361,19 @@ if __name__ == '__main__':
                     #np.savez(os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.npz"), pred_raw_dict[key])
                     #use nib to save a nii.gz version too
                     nib.save(nib.Nifti1Image(pred_raw_dict[key], np.eye(4)), os.path.join(args.save_path, case_id, 'predictions_raw', f"{key}.nii.gz"))
+        
+        if cls_out is not None:
+            #save classification output
+            lesion_classes = [c for c in class_list if (('lesion' in c) or ('malignant' in c) or ('benign' in c))] #same as we do in training (inside the loss function)
+            cls_out = cls_out.squeeze(0)
+            assert cls_out.shape[0]==len(lesion_classes), f'Classification output shape {cls_out.shape} does not match number of lesion classes {len(lesion_classes)}'
+            #create a dict of class probabilities
+            cls_prob_dict = {}
+            for i, c in enumerate(lesion_classes):
+                cls_prob_dict[c] = cls_out[i].detach().float().cpu().item()
+            #save as yaml
+            with open(os.path.join(args.save_path, case_id, 'cls_probs.yaml'), 'w') as f:
+                yaml.dump(cls_prob_dict, f)
         
         print(f"{img_name} finished. Process time: {toc-tic}s")
 
