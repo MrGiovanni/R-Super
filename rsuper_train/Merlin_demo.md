@@ -214,6 +214,8 @@ python calculate_sensitivity_specificity.py \
 
 Find the final results in result/test_on_merlin/abdomenatlas/merlin_pancreas/metrics.csv. The file includes sensitivity, specificity and F1-Score at multiple decision thresholds.
 
+The flag --organ_mask_on_lesions can be set in predict_abdomenatlas.py and it may improve detection by removing false-positive tumors outside of the organ. However, it can reduce dice for large tumors, because they can grow way beyond the organ.
+
 <details>
 <summary style="margin-left: 25px;">Decision thresholds and AUC</summary>
 <div style="margin-left: 25px;">
