@@ -191,7 +191,7 @@ python predict_abdomenatlas.py \
     --load "./exp/abdomenatlas_ufo/merlin_pancreas/fold_0_latest.pth" \
     --img_path "/path/to/merlin_medformer_pancreas_normals_npz/" \
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
-    --gpu '0' --organ_mask_on_lesion \
+    --gpu '0' \
     --save_path "./result/test_on_merlin/" \
     --ids  Merlin_pancreas_testing_cases.csv \
     --meta Merlin_metadata_hf_clean.csv \
@@ -233,7 +233,7 @@ python predict_abdomenatlas.py \
     --load "./exp/abdomenatlas/MedFormerPanTS/pants_pancreas_release/fold_0_latest.pth" \
     --img_path "/path/to/merlin_medformer_pancreas_normals/" \
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
-    --gpu '0' --organ_mask_on_lesion \
+    --gpu '0' \
     --save_path "./result/test_on_merlin/" \
     --ids  Merlin_pancreas_testing_cases.csv
 
@@ -261,7 +261,7 @@ python predict_abdomenatlas.py \
     --load "./exp/abdomenatlas_ufo/merlin_pancreas/fold_0_latest.pth" \
     --img_path /path/to/pants_medformer_test_npz/
     --class_list dataset_conversion/label_names_mask_dataset_pancreas.yaml \
-    --gpu '0' --organ_mask_on_lesion \
+    --gpu '0' \
     --save_path "./result/test_on_pants/" \
     --ids  pants_test_set.csv
 
