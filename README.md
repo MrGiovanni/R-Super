@@ -97,7 +97,9 @@ For inference instructions, check the evaluation section [here](rsuper_train/REA
 
 > The checkpoint 'R-Super (Paper)' is the public segmentation checkpoint trained with **the largest number of lesion CT scans (6.9K)** that we know of: *2.2K pancreatic lesion CT-Report pairs, 344 pancreatic lesion CT-Mask pairs, 2.7K kidney lesion CT-Report pairs, 1.7K kidney lesion CT-Mask pairs, 9K controls w/o kidney or pancreas tumors.*
 
+## Interesting Related Works
 
+- **MS-R-Super**: Extension of R-Super to **MRI** and application to the **BraTS** dataset: [https://github.com/jwkl0990-glitch/MS-R-Super](https://github.com/jwkl0990-glitch/MS-R-Super)
 
 ## Detailed Code Instructions
 
