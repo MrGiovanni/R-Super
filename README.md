@@ -99,7 +99,7 @@ For inference instructions, check the evaluation section [here](rsuper_train/REA
 
 ## Interesting Related Works
 
-- **MS-R-Super**: Extension of R-Super to **MRI** and application to the **BraTS** dataset: [https://github.com/jwkl0990-glitch/MS-R-Super](https://github.com/jwkl0990-glitch/MS-R-Super)
+- **MS-R-Super**: Extension of R-Super to **MRI** and application to the **BraTS** dataset: [Code](https://github.com/jwkl0990-glitch/MS-R-Super) / [Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=11515570)
 
 ## Detailed Code Instructions
 
