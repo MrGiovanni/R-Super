@@ -32,6 +32,13 @@ We present R-Super, a training strategy that transforms radiology reports (text)
 > **Extension: Learning from 100,000 CT Scans and Reports, to Segment 7 Understudied Tumor Types**  
 > We have assembled more than 100,000 CT-Report pairs and trained R-Super to detect 7 tumor types missing from public CT-Mask datasets. Our _preprint_ is available [here](https://arxiv.org/abs/2510.14803).
 
+
+>[!NOTE]
+>We released R-Super trained on Merlin Plus for **detecting and segmenting tumors in 9 organs**!
+>
+>[![HF](https://img.shields.io/badge/🤗%20Hugging%20Face-Merlin--Cancer--Super-yellow?style=flat-square)](https://huggingface.co/AbdomenAtlas/Merlin-Cancer-Super)
+
+
 ## Papers
 
 <b>Learning Segmentation from Radiology Reports</b> <br/>
