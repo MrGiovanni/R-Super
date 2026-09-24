@@ -156,6 +156,141 @@ def _intensity_views(x, seed, n):
        No geometry change: caller keeps the sliding window's own accumulation."""
     out=[x]
     for v in range(1,n):
+        _np.random.seed(seed+v); torch.manual_seed(seed+v)
+        y=x.clone()
+        if _np.random.random() < 0.3: y=_aug.brightness_multiply(y, multiply_range=[0.7,1.3])
+        if _np.random.random() < 0.3: y=_aug.brightness_additive(y, std=0.1)
+        if _np.random.random() < 0.3: y=_aug.gamma(y, gamma_range=[0.7,1.5])
+        if _np.random.random() < 0.3: y=_aug.contrast(y, contrast_range=[0.7,1.3])
+        if _np.random.random() < 0.3: y=_aug.gaussian_blur(y, sigma_range=[0.5,1.5])
+        if _np.random.random() < 0.3: y=_aug.gaussian_noise(y, std=_np.random.random()*0.2)
+        out.append(y)
+    return out
+
+
+
+def inference_boxcentre_tta(net, img, args, n_views=4, class_list=None):
+    """EXPERIMENT 2: crop around the CENTRE of each sliding-window box that contains
+       pancreas, then apply the TRAINING augmentations (spatial + intensity) for TTA.
+       Uses the training functions: crop_around_coordinate_3d for the enlarged crop,
+       random_scale_rotate_translate_3d for the spatial transform, crop_3d for the
+       centre-crop, and the loader's intensity block.  Coordinate tracers ride in the
+       image so the prediction can be mapped back exactly."""
+    import types as _t
+    p1,_cls = inference_sliding_window_one_pass(net, img, args, pancreas=None, gaussian=False)
+    p1=p1.float()
+    cl=list(class_list) if class_list is not None else list(args.class_list)
+    les=[i for i,c in enumerate(cl) if c=='pancreatic_lesion']
+    pan=[i for i,c in enumerate(cl) if c=='pancreas']
+    if not les: return p1,_cls
+    LES=les[0]; PAN=pan[0] if pan else None
+    # Gate: box-centre TTA gains on medium/large lesions but collapses when pass-1's
+    # lesion is tiny or already failing (the crop is then mostly non-lesion context).
+    # Fall back to pass-1 in that regime.  THRESHOLD MUST BE SET ON A VALIDATION SET
+    # (PanTS / PANORAMA positives), not on the test data.
+    _minles=float(_os.environ.get('RSUPER_BOXMINLES','0'))
+    _lesvox=float((p1[0,LES]>0.5).sum())
+    if _minles>0 and _lesvox<_minles:
+        print(f'[box-tta] pass-1 lesion {_lesvox:.0f} vox < {_minles:.0f}: fall back to pass-1', flush=True)
+        return p1,_cls
+    B,C,D,H,W=img.shape
+    wd,wh,ww=args.window_size
+    hd,hh,hw=wd//2,wh//2,ww//2
+    organ=(p1[0,PAN]>0.5).cpu() if PAN is not None else None
+    gw=make_gaussian_kernel(wd,wh,ww,sigma_scale=0.25)[0,0].float().cpu()
+    ct=img.float().cpu()
+    zz,yy,xx=torch.meshgrid(torch.arange(D),torch.arange(H),torch.arange(W),indexing='ij')
+    img5=torch.cat([ct[:, :1],(zz+1).float()[None,None],(yy+1).float()[None,None],
+                    (xx+1).float()[None,None],torch.ones(1,1,D,H,W)],dim=1)
+    dummy=torch.zeros(1,1,D,H,W)
+    acc=p1[0,LES].cpu().clone(); cnt=torch.ones(D,H,W)
+    nbox=0
+    with torch.no_grad():
+        for i in range(D//hd):
+            for j in range(H//hh):
+                for k in range(W//hw):
+                    d0,d1=split_idx(hd,D,i); h0,h1=split_idx(hh,H,j); w0,w1=split_idx(hw,W,k)
+                    if organ is not None and organ[d0:d1,h0:h1,w0:w1].sum()==0: continue
+                    nbox+=1
+                    ctr=torch.tensor([(d0+d1)//2,(h0+h1)//2,(w0+w1)//2])
+                    for v in range(n_views):
+                        _np.random.seed(7919*nbox+v); torch.manual_seed(7919*nbox+v)
+                        big,_=_aug.crop_around_coordinate_3d(img5, dummy, [wd+20,wh+40,ww+40],
+                                                             ctr, 'small_rnd_shift')
+                        if v>0:
+                            big,_=_aug.random_scale_rotate_translate_3d(big, torch.zeros_like(big[:, :1]),
+                                                                        args.scale,args.rotate,args.translate)
+                        cr,_=_aug.crop_3d(big, torch.zeros_like(big[:, :1]), [wd,wh,ww], mode='center')
+                        x=cr[:, :1].clone()
+                        if v>0:
+                            if _np.random.random()<0.3: x=_aug.brightness_multiply(x, multiply_range=[0.7,1.3])
+                            if _np.random.random()<0.3: x=_aug.brightness_additive(x, std=0.1)
+                            if _np.random.random()<0.3: x=_aug.gamma(x, gamma_range=[0.7,1.5])
+                            if _np.random.random()<0.3: x=_aug.contrast(x, contrast_range=[0.7,1.3])
+                            if _np.random.random()<0.3: x=_aug.gaussian_blur(x, sigma_range=[0.5,1.5])
+                            if _np.random.random()<0.3: x=_aug.gaussian_noise(x, std=_np.random.random()*0.2)
+                        # A box near a volume border comes back smaller than the window, and
+                        # MedFormer's patch_merging cannot split an odd spatial dim (27 -> 14+13),
+                        # which crashed 31/250 PANORAMA cases (thick-slice scans). Pad up to the
+                        # window for the forward pass, then crop the output back so it still
+                        # aligns with the tracer channels in cr. No-op when the box is full size.
+                        _xs=tuple(x.shape[2:])
+                        if _xs!=(wd,wh,ww):
+                            print(f'[box-tta] padding box {_xs} -> {(wd,wh,ww)}', flush=True)
+                            x=_F.pad(x,(0,ww-_xs[2],0,wh-_xs[1],0,wd-_xs[0]))
+                        o=net(x.cuda().float())
+                        pr=o['segmentation'] if isinstance(o,dict) else o
+                        while isinstance(pr,(tuple,list)): pr=pr[0]
+                        pr=torch.sigmoid(pr)[0,LES].float().cpu()
+                        if _xs!=(wd,wh,ww):
+                            pr=pr[:_xs[0],:_xs[1],:_xs[2]]
+                        fz=cr[0,1]-1.0; fy=cr[0,2]-1.0; fx=cr[0,3]-1.0
+                        m=(cr[0,4]>0.999)&(fz>=0)&(fy>=0)&(fx>=0)&(fz<=D-1)&(fy<=H-1)&(fx<=W-1)
+                        if m.sum()==0: continue
+                        # gw is full-window; for a clipped border box use the matching sub-block
+                        # (padding above is applied at the end of each dim, so the valid data is
+                        # the leading sub-block).
+                        _gwv = gw if _xs==(wd,wh,ww) else gw[:_xs[0],:_xs[1],:_xs[2]]
+                        _w=_gwv[m]; _p=pr[m]
+                        z0=torch.floor(fz[m]); y0=torch.floor(fy[m]); x0=torch.floor(fx[m])
+                        dz=fz[m]-z0; dy=fy[m]-y0; dx=fx[m]-x0
+                        z0=z0.long(); y0=y0.long(); x0=x0.long()
+                        for _iz in (0,1):
+                            for _iy in (0,1):
+                                for _ix in (0,1):
+                                    wz=dz if _iz else (1-dz); wy=dy if _iy else (1-dy); wx=dx if _ix else (1-dx)
+                                    ww_=_w*wz*wy*wx
+                                    acc.index_put_(((z0+_iz).clamp(0,D-1),(y0+_iy).clamp(0,H-1),
+                                                    (x0+_ix).clamp(0,W-1)), _p*ww_, accumulate=True)
+                                    cnt.index_put_(((z0+_iz).clamp(0,D-1),(y0+_iy).clamp(0,H-1),
+                                                    (x0+_ix).clamp(0,W-1)), ww_, accumulate=True)
+    p1[0,LES]=(acc/cnt).to(p1.device)
+    print(f'[box-tta] {nbox} pancreas boxes x {n_views} views', flush=True)
+    return p1,_cls
+
+def inference_sliding_window(net, img, args, pancreas=None,gaussian=False):
+    _bx=int(_os.environ.get('RSUPER_BOXTTA','0'))
+    if _bx:
+        pred_output, cls_output = inference_boxcentre_tta(net, img, args, n_views=_bx,
+                                                          class_list=getattr(args,'class_list',None))
+        if cls_output is not None and (cls_output.sum() > 0).item():
+            cls_output = torch.amax(cls_output, dim=(-3,-2,-1))
+            return pred_output.float(), cls_output.float()
+        return pred_output.float()
+    if args.inference_2_stages:
+        pred_output, cls_output =  inference_2_stages(net, img, args, organs_with_tumors=args.organs_with_tumor, class_list=args.class_list)
+    else:
+        pred_output, cls_output = inference_sliding_window_one_pass(net, img, args, pancreas=pancreas, gaussian=gaussian)
+    
+    if cls_output is not None and (cls_output.sum() > 0).item():
+        cls_output = torch.amax(cls_output, dim=(-3, -2, -1))
+        return pred_output.float(), cls_output.float()
+    else:
+        return pred_output.float()
+    
+    
+def inference_sliding_window_one_pass(net, img, args, pancreas=None,gaussian=False):
+    gaussian = gaussian or _os.environ.get('RSUPER_GAUSS','0')=='1'
     '''
     img: torch tensor, B, C, D, H, W
     return: prob (after softmax), B, classes, D, H, W
@@ -176,6 +311,9 @@ def _intensity_views(x, seed, n):
     B, C, D, H, W = img.shape
 
     win_d, win_h, win_w = args.window_size
+    
+    if gaussian:
+        gauss_w = make_gaussian_kernel(win_d, win_h, win_w, sigma_scale=float(_os.environ.get('RSUPER_SIGMA','0.25'))).to(torch.bfloat16).cpu()
 
     flag = False
     if D < win_d or H < win_h or W < win_w:
@@ -194,10 +332,12 @@ def _intensity_views(x, seed, n):
     half_win_h = win_h // 2
     half_win_w = win_w // 2
 
-    pred_output = torch.zeros((B, args.classes, D, H, W)).cpu()#.to(img.device)
+    pred_output = torch.zeros((B, args.classes, D, H, W),dtype=torch.bfloat16).cpu()#.to(img.device)
+    cls_output = None
+    cls_counter = torch.zeros((B, 1, D, H, W),dtype=torch.bfloat16).cpu()#.to(img.device)
 
-    counter = torch.zeros((B, 1, D, H, W)).cpu()#.to(img.device)
-    one_count = torch.ones((B, 1, win_d, win_h, win_w)).cpu()#.to(img.device)
+    counter = torch.zeros((B, 1, D, H, W),dtype=torch.bfloat16).cpu()#.to(img.device)
+    one_count = torch.ones((B, 1, win_d, win_h, win_w),dtype=torch.bfloat16).cpu()#.to(img.device)
 
     with torch.no_grad():
         for i in range(D // half_win_d):
@@ -209,28 +349,149 @@ def _intensity_views(x, seed, n):
                     w_start_idx, w_end_idx = split_idx(half_win_w, W, k)
 
                     input_tensor = img[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx]
-                    
+                    pred_cls = None # for MTL-like approaches, which can provide the tumor probability
                     if pancreas is None or pancreas[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx].sum() > 0:
-                        pred = net(input_tensor)
-                        if isinstance(pred, dict):
-                            pred = pred['segmentation']
-                        if isinstance(pred, tuple) or isinstance(pred, list):
-                            pred = pred[0]
-                        if isinstance(pred, tuple) or isinstance(pred, list):
-                            pred = pred[0]
+                        _ttrain = int(_os.environ.get('RSUPER_TRAINTTA','0'))
+                        _teff   = int(_os.environ.get('RSUPER_EFFTTA','0'))
+                        if _ttrain or _teff:
+                            _n = _ttrain or _teff
+                            _eff = bool(_teff)
+                            _acc=None
+                            for _v in range(_n):
+                                if _v==0:
+                                    _inp=input_tensor; _th=None; _win=None
+                                else:
+                                    _inp,_th,_win=_train_tta_view_ctx(img, d_start_idx,d_end_idx,
+                                        h_start_idx,h_end_idx, w_start_idx,w_end_idx, _v, effective_only=_eff)
+                                _o=net(_inp)
+                                _p=_o['segmentation'] if isinstance(_o,dict) else _o
+                                while isinstance(_p,(tuple,list)): _p=_p[0]
+                                _p=torch.sigmoid(_p)
+                                if _th is not None:
+                                    _p=_invert_pred(_p, _th, _win)
+                                _acc=_p if _acc is None else _acc+_p
+                            model_output={'segmentation':_acc/_n}
+                            _itta=0; _ftta=0
+                            pred=model_output['segmentation']; pred_cls=None
+                            _TRAIN_TTA_DONE=True
+                        else:
+                            _TRAIN_TTA_DONE=False
+                        _int = int(_os.environ.get('RSUPER_INTTTA','0'))
+                        if _int>1:
+                            # EXPERIMENT 1: intensity-only TTA, identical geometry.
+                            _sd=1000003*(i+1)+1009*(j+1)+13*(k+1)
+                            _acc=None
+                            for _x in _intensity_views(input_tensor,_sd,_int):
+                                _o=net(_x)
+                                _pp=_o['segmentation'] if isinstance(_o,dict) else _o
+                                while isinstance(_pp,(tuple,list)): _pp=_pp[0]
+                                _pp=torch.sigmoid(_pp)
+                                _acc=_pp if _acc is None else _acc+_pp
+                            model_output={'segmentation':_acc/_int}
+                            _INT_DONE=True
+                        else:
+                            _INT_DONE=False
+                        _itta = int(_os.environ.get('RSUPER_ITTA','0')) if not _INT_DONE else 0 if not _TRAIN_TTA_DONE else 0
+                        _ftta = int(_os.environ.get('RSUPER_TTA','0'))
+                        if (not _TRAIN_TTA_DONE) and (_itta or _ftta or float(_os.environ.get('RSUPER_ROT','0')) or int(_os.environ.get('RSUPER_COMBO','0'))):
+                            if _itta:
+                                _views=[('id',None),('mul',0.9),('mul',1.1),('con',0.9),
+                                        ('con',1.1),('add',0.05),('add',-0.05),('mul',0.8)][:_itta]
+                            else:
+                                _views=[('flip',a) for a in
+                                        [[],[-1],[-2],[-3],[-1,-2],[-1,-3],[-2,-3],[-1,-2,-3]][:_ftta]]
+                            _combo=int(_os.environ.get('RSUPER_COMBO','0'))
+                            _rot=float(_os.environ.get('RSUPER_ROT','0'))
+                            if _rot:
+                                # rotation TTA about the axial (z) axis, within the +-30 deg
+                                # range used in training (rotate:[30,30,30])
+                                _views=[('rot',0.0),('rot',_rot),('rot',-_rot),
+                                        ('rot',2*_rot),('rot',-2*_rot)][:int(_os.environ.get('RSUPER_NROT','3'))]
+                            if _combo:
+                                # rotation x intensity, both inside the trained ranges
+                                _r=float(_os.environ.get('RSUPER_ROT','15'))
+                                _views=[('ri',(0.0,1.0)),('ri',(_r,1.0)),('ri',(-_r,1.0)),
+                                        ('ri',(0.0,0.9)),('ri',(0.0,1.1)),
+                                        ('ri',(_r,0.9)),('ri',(-_r,1.1))][:_combo]
+                            _acc=None
+                            for _k,_v in _views:
+                                if _k=='id' or (_k=='flip' and not _v): _inp=input_tensor
+                                elif _k=='mul': _inp=input_tensor*_v
+                                elif _k=='add': _inp=input_tensor+_v
+                                elif _k=='con':
+                                    _m=input_tensor.mean(); _inp=(input_tensor-_m)*_v+_m
+                                elif _k=='ri':
+                                    _ang,_mul=_v
+                                    _inp=input_tensor*_mul
+                                    if abs(_ang)>1e-6:
+                                        import torchvision.transforms.functional as _TF
+                                        _b,_c,_d,_h,_w=_inp.shape
+                                        _x=_inp.permute(0,2,1,3,4).reshape(_b*_d,_c,_h,_w)
+                                        _x=_TF.rotate(_x,_ang)
+                                        _inp=_x.reshape(_b,_d,_c,_h,_w).permute(0,2,1,3,4)
+                                elif _k=='rot':
+                                    if abs(_v)<1e-6: _inp=input_tensor
+                                    else:
+                                        import torchvision.transforms.functional as _TF
+                                        _b,_c,_d,_h,_w=input_tensor.shape
+                                        _x=input_tensor.permute(0,2,1,3,4).reshape(_b*_d,_c,_h,_w)
+                                        _x=_TF.rotate(_x,_v)
+                                        _inp=_x.reshape(_b,_d,_c,_h,_w).permute(0,2,1,3,4)
+                                else: _inp=torch.flip(input_tensor,_v)
+                                _o=net(_inp)
+                                _p=_o['segmentation'] if isinstance(_o,dict) else _o
+                                while isinstance(_p,(tuple,list)): _p=_p[0]
+                                _p=torch.sigmoid(_p)
+                                if _k=='flip' and _v: _p=torch.flip(_p,_v)
+                                if _k=='ri' and abs(_v[0])>1e-6:
+                                    import torchvision.transforms.functional as _TF
+                                    _b,_c,_d,_h,_w=_p.shape
+                                    _y=_p.permute(0,2,1,3,4).reshape(_b*_d,_c,_h,_w)
+                                    _y=_TF.rotate(_y,-_v[0])
+                                    _p=_y.reshape(_b,_d,_c,_h,_w).permute(0,2,1,3,4)
+                                if _k=='rot' and abs(_v)>1e-6:
+                                    import torchvision.transforms.functional as _TF
+                                    _b,_c,_d,_h,_w=_p.shape
+                                    _y=_p.permute(0,2,1,3,4).reshape(_b*_d,_c,_h,_w)
+                                    _y=_TF.rotate(_y,-_v)
+                                    _p=_y.reshape(_b,_d,_c,_h,_w).permute(0,2,1,3,4)
+                                _acc=_p if _acc is None else _acc+_p
+                            model_output={'segmentation':_acc/len(_views)}
+                        elif not (_TRAIN_TTA_DONE or _INT_DONE):
+                            model_output = net(input_tensor)
                         
-                        pred = F.sigmoid(pred)
+                        if isinstance(model_output, dict):
+                            pred = model_output['segmentation']
+                            
+                        if isinstance(pred, tuple) or isinstance(pred, list):
+                            pred = pred[0]
+                        if isinstance(pred, tuple) or isinstance(pred, list):
+                            pred = pred[0]
+                            
+                        if isinstance(model_output, dict):
+                            pred_cls = classification_to_3D(model_output, pred.shape[-3], pred.shape[-2], pred.shape[-1])
+                        
+                        if (_INT_DONE or _TRAIN_TTA_DONE or _itta or _ftta or float(_os.environ.get('RSUPER_ROT','0')) or int(_os.environ.get('RSUPER_COMBO','0'))):
+                            pass
+                        elif not args.epai_stage_2:
+                            pred = torch.sigmoid(pred)
+                            #print('using sigmoid')
+                        else:
+                            pred = F.softmax(pred, dim=1)
+                        
+                        #pred_cls is trained with sigmoid loss (BCE)
                     else:
                         #print('Skipped ')
-                        pred = torch.zeros((B, args.classes, win_d, win_h, win_w))
+                        pred = torch.zeros((B, args.classes, win_d, win_h, win_w),dtype=torch.bfloat16)
 
+                    if pred_cls is not None:
+                        if cls_output is None:
+                            cls_output = torch.zeros((B, pred_cls.shape[1], D, H, W),dtype=torch.bfloat16).cpu()
+                        cls_output[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += pred_cls.to(torch.bfloat16).cpu()
+                        cls_counter[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += one_count
                     
-
-                    pred_output[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += pred.cpu()
-
-                    counter[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += one_count.cpu()
-
-    pred_output /= counter
+                    
+                    if not gaussian:
                         pred_output[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += pred.to(torch.bfloat16).cpu()
                         counter[:, :, d_start_idx:d_end_idx, h_start_idx:h_end_idx, w_start_idx:w_end_idx] += one_count
                     else:
