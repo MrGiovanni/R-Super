@@ -119,6 +119,7 @@ def evaluate_predictions(ground_truth_csv, predictions_csv, output_csv):
 
     # We'll store final rows, one per threshold
     results = []
+    best_balacc = {organ: None for organ in organs}
 
     # For each threshold, compute sensitivity/specificity/F1 for each organ
     for T in thresholds:
@@ -149,6 +150,14 @@ def evaluate_predictions(ground_truth_csv, predictions_csv, output_csv):
             # F1-Score
             f1_str = format_f1(TP, FP, FN)
 
+            if TP + FN > 0 and TN + FP > 0:
+                sensitivity = TP / (TP + FN)
+                specificity = TN / (TN + FP)
+                balacc = (sensitivity + specificity) / 2
+                best = best_balacc[organ]
+                if best is None or (balacc, -T) > (best[0], -best[3]):
+                    best_balacc[organ] = (balacc, sensitivity, specificity, T)
+
             row_data[f"{organ}_sensitivity"] = sens_str
             row_data[f"{organ}_specificity"] = spec_str
             row_data[f"{organ}_f1"] = f1_str
@@ -172,6 +181,15 @@ def evaluate_predictions(ground_truth_csv, predictions_csv, output_csv):
             writer.writerow(row_data)
 
     print(f"Evaluation complete. Results saved to {output_csv}")
+    print("Best balanced accuracy by organ (lowest threshold breaks ties):")
+    for organ in organs:
+        best = best_balacc[organ]
+        if best is None:
+            print(f"{organ}: balacc=N/A (requires positive and negative cases)")
+            continue
+        balacc, sensitivity, specificity, threshold = best
+        print(f"{organ}: balacc={balacc:.2%}, sen={sensitivity:.2%}, "
+              f"spec={specificity:.2%}, th={threshold} mm3")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate predictions against ground truth at multiple volume thresholds.")
