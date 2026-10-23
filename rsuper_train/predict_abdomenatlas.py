@@ -843,8 +843,7 @@ def init_model(args,classes,old_classes=None):
         model = get_model(args,classes=c)
         if args.update_output_layer or args.malignancy_classification:
             from model.dim3.medformer import update_output_layer_onk
-            model=update_output_layer_onk(model, original_classes=old_classes, new_classes=new_classes,
-                                            age_and_sex=args.age_and_sex_into_classifier)
+            model=update_output_layer_onk(model, original_classes=old_classes, new_classes=new_classes)
         if not args.EMA:
             pth = torch.load(ckp_path, map_location=torch.device('cpu'))['model_state_dict']
         else:
