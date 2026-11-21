@@ -103,7 +103,7 @@ For inference instructions, check the evaluation section [here](rsuper_train/REA
 | **Merlin-Cancer-Super (R-Super multi-tumor)** | *23K CTs*, Merlin Plus (public) | segments **9 tumor types** | Table 1, [MICCAI 2026 paper](https://papers.miccai.org/miccai-2026/paper/4063_paper.pdf) (R-Super) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/Merlin-Cancer-Super) |
 | **R-Super (Paper)** | *16K CTs*, AbdomenAtlas 2.0 (public) & UCSF (private) | Pancreas & kidney tumor segmentation | Table 2, [MICCAI 2025 paper](https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf) (R-Super) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/R-SuperPancreasKidney) |
 | **R-Super (Demo)** | *14K CTs*, PanTS (public) & Merlin (public) | Pancreas tumor segmentation | [Demo](rsuper_train/Merlin_demo.md) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/R-SuperPanTSMerlin) |
-| **Baseline (Paper, no report supervision)** | *9K CTs*, AbdomenAtlas 2.0 (beta) | Pancreas & kidney tumor segmentation | Table 2, [MICCAI paper](https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf) (Segmentation) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/RSuperMaskPretrained) |
+| **Baseline (Paper, no report supervision)** | *9K CTs*, AbdomenAtlas 2.0 (beta) | Pancreas & kidney tumor segmentation | Table 2, [MICCAI 2025 paper](https://www.cs.jhu.edu/~zongwei/publication/bassi2025learning.pdf) (Segmentation) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/RSuperMaskPretrained) |
 | **Baseline (Demo, no report supervision)** | *10K CTs*, PanTS | Pancreas tumor segmentation | [Demo](rsuper_train/Merlin_demo.md) | 🤗 [Download](https://huggingface.co/AbdomenAtlas/MedFormerPanTS) |
 
 
